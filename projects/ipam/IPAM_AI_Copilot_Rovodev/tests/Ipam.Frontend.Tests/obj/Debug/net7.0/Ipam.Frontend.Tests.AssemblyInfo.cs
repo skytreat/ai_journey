@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Ipam.Frontend.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b8bfd8724e0d39a425e6effb8a5a9ef1718a095e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Ipam.Frontend.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Ipam.Frontend.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

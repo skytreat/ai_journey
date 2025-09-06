@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("IPAM REST API Client Library")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+580c33d6c34a020a326ff882f9f0a2c5191f3d23")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b8bfd8724e0d39a425e6effb8a5a9ef1718a095e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Ipam.Client")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Ipam.Client")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
