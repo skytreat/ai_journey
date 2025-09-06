@@ -415,12 +415,12 @@ az network lb rule create \
 
 ### **5.1 Dockerfile for Gateway**
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 5000
 EXPOSE 5001
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY ["src/Ipam.Gateway/Ipam.Gateway.csproj", "src/Ipam.Gateway/"]
 COPY ["src/Ipam.DataAccess/Ipam.DataAccess.csproj", "src/Ipam.DataAccess/"]

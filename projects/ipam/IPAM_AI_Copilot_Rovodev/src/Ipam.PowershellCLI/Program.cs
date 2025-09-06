@@ -102,7 +102,7 @@ namespace IpamPowershellCLI
             {
                 var client = new IpamApiClient("http://localhost:5000");
                 var addressSpace = new AddressSpace { Id = id, Name = name, Description = description };
-                var result = await client.UpdateAddressSpaceAsync(addressSpace);
+                var result = await client.UpdateAddressSpaceAsync(id, addressSpace);
                 Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             });
             
@@ -198,7 +198,7 @@ namespace IpamPowershellCLI
             {
                 var client = new IpamApiClient("http://localhost:5000");
                 var tag = new Tag { Name = name, Description = description };
-                var result = await client.UpdateTagAsync(addressSpaceId, tag);
+                var result = await client.UpdateTagAsync(addressSpaceId, name, tag);
                 Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             });
             
@@ -238,7 +238,7 @@ namespace IpamPowershellCLI
             {
                 var client = new IpamApiClient("http://localhost:5000");
                 var ipAddress = new IPAddress { AddressSpaceId = addressSpaceId, Prefix = prefix };
-                var result = await client.CreateIPAddressAsync(ipAddress);
+                var result = await client.CreateIPAddressAsync(addressSpaceId, ipAddress);
                 Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             });
             
