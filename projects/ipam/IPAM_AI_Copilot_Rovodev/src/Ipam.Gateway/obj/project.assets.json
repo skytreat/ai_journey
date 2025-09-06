@@ -2673,11 +2673,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\Ipam.Gateway.csproj",
+      "projectUniqueName": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\Ipam.Gateway.csproj",
       "projectName": "Ipam.Gateway",
-      "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\Ipam.Gateway.csproj",
+      "projectPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\Ipam.Gateway.csproj",
       "packagesPath": "C:\\Users\\tuanyuan\\.nuget\\packages\\",
-      "outputPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\obj\\",
+      "outputPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\tuanyuan\\AppData\\Roaming\\NuGet\\NuGet.Config"

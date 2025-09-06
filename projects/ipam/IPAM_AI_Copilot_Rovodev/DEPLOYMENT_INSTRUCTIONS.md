@@ -124,12 +124,6 @@ dotnet publish src/Ipam.Gateway/Ipam.Gateway.csproj \
 
 # Note: The system uses Ipam.Gateway as the main API Gateway service
 
-# Publish Data Access API (Microservice)
-dotnet publish src/Ipam.DataAccess.Api/Ipam.DataAccess.Api.csproj \
-    --configuration Release \
-    --output ./publish/dataaccess-api \
-    --self-contained false
-
 # Publish Frontend API
 dotnet publish src/Ipam.Frontend/Ipam.Frontend.csproj \
     --configuration Release \
@@ -463,19 +457,6 @@ services:
       - ipam-frontend
     restart: unless-stopped
 
-  ipam-dataaccess-api:
-    build:
-      context: .
-      dockerfile: src/Ipam.DataAccess.Api/Dockerfile
-    ports:
-      - "5002:5002"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:5002
-      - ConnectionStrings__AzureTableStorage=${AZURE_STORAGE_CONNECTION_STRING}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-    restart: unless-stopped
-
   ipam-frontend:
     build:
       context: .
@@ -485,10 +466,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5001
-      - DataAccessApi__BaseUrl=http://ipam-dataaccess-api:5002
+      - DataAccessApi__BaseUrl=http://ipam-frontend:5001
       - DataAccessApi__ApiKey=${JWT_SECRET_KEY}
-    depends_on:
-      - ipam-dataaccess-api
     restart: unless-stopped
 
   nginx:

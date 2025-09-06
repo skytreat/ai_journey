@@ -1241,11 +1241,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj",
+      "projectUniqueName": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj",
       "projectName": "Ipam.DataAccess",
-      "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj",
+      "projectPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj",
       "packagesPath": "C:\\Users\\tuanyuan\\.nuget\\packages\\",
-      "outputPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\obj\\",
+      "outputPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\tuanyuan\\AppData\\Roaming\\NuGet\\NuGet.Config"

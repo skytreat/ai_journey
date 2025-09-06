@@ -3,3 +3,9 @@ D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net
 D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.AssemblyInfoInputs.cache
 D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.AssemblyInfo.cs
 D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.csproj.CoreCompileInputs.cache
+D:\workspace\git\ai_journey\projects\ipam\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.csproj.AssemblyReference.cache
+D:\workspace\git\ai_journey\projects\ipam\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\git\ai_journey\projects\ipam\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.AssemblyInfoInputs.cache
+D:\workspace\git\ai_journey\projects\ipam\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.AssemblyInfo.cs
+D:\workspace\git\ai_journey\projects\ipam\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.csproj.CoreCompileInputs.cache
+D:\workspace\git\ai_journey\projects\ipam\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.sourcelink.json

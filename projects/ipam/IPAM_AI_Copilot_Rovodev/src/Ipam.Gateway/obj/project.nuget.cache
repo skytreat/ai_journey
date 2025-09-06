@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Vd57q7E9eT8=",
+  "dgSpecHash": "31XLXMMcmis=",
   "success": true,
-  "projectFilePath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\Ipam.Gateway.csproj",
+  "projectFilePath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Gateway\\Ipam.Gateway.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tuanyuan\\.nuget\\packages\\cachemanager.core\\2.0.0-beta-1629\\cachemanager.core.2.0.0-beta-1629.nupkg.sha512",
     "C:\\Users\\tuanyuan\\.nuget\\packages\\cachemanager.microsoft.extensions.configuration\\2.0.0-beta-1629\\cachemanager.microsoft.extensions.configuration.2.0.0-beta-1629.nupkg.sha512",

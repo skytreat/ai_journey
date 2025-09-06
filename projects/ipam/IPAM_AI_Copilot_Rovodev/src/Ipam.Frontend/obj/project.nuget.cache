@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "JWUaQUA5vj4=",
+  "dgSpecHash": "OfVuztzOiJM=",
   "success": true,
-  "projectFilePath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Frontend\\Ipam.Frontend.csproj",
+  "projectFilePath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Frontend\\Ipam.Frontend.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tuanyuan\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\tuanyuan\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",

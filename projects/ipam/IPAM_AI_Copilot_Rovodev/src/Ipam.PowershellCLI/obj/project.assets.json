@@ -3128,11 +3128,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj",
+      "projectUniqueName": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj",
       "projectName": "ipam-cli",
-      "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj",
+      "projectPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj",
       "packagesPath": "C:\\Users\\tuanyuan\\.nuget\\packages\\",
-      "outputPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.PowershellCLI\\obj\\",
+      "outputPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.PowershellCLI\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\tuanyuan\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -3147,11 +3147,11 @@
         "net7.0": {
           "targetAlias": "net7.0",
           "projectReferences": {
-            "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Client\\Ipam.Client.csproj": {
-              "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Client\\Ipam.Client.csproj"
+            "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Client\\Ipam.Client.csproj": {
+              "projectPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.Client\\Ipam.Client.csproj"
             },
-            "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj": {
-              "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj"
+            "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj": {
+              "projectPath": "D:\\workspace\\git\\ai_journey\\projects\\ipam\\IPAM_AI_Copilot_Rovodev\\src\\Ipam.DataAccess\\Ipam.DataAccess.csproj"
             }
           }
         }
