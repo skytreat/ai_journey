@@ -454,7 +454,7 @@ lcov.info
 .idea/
 
 # Visual Studio Code
-.vscode/
+# .vscode/
 
 # Temporary files created by Rovo Dev
 tmp_rovodev_*
