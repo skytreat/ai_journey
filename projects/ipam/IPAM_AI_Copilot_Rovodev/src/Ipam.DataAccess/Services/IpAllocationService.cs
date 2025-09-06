@@ -1,0 +1,300 @@
+using Ipam.DataAccess.Interfaces;
+using Ipam.DataAccess.Models;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Ipam.DataAccess.Services
+{
+    /// <summary>
+    /// Advanced service for IP allocation, subnet management, and utilization tracking
+    /// </summary>
+    /// <remarks>
+    /// Author: IPAM Team
+    /// Date: 2024-01-20
+    /// </remarks>
+    public class IpAllocationService
+    {
+        private readonly IIpNodeRepository _ipNodeRepository;
+        private readonly IpTreeService _ipTreeService;
+        private readonly PerformanceMonitoringService _performanceService;
+        private readonly ILogger<IpAllocationService> _logger;
+
+        public IpAllocationService(
+            IIpNodeRepository ipNodeRepository,
+            IpTreeService ipTreeService,
+            PerformanceMonitoringService performanceService,
+            ILogger<IpAllocationService> logger)
+        {
+            _ipNodeRepository = ipNodeRepository;
+            _ipTreeService = ipTreeService;
+            _performanceService = performanceService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Finds the next available subnet of specified size within a parent network
+        /// </summary>
+        /// <param name="addressSpaceId">Address space identifier</param>
+        /// <param name="parentCidr">Parent network CIDR</param>
+        /// <param name="subnetSize">Desired subnet prefix length</param>
+        /// <param name="count">Number of subnets to allocate</param>
+        /// <returns>List of available subnet CIDRs</returns>
+        public async Task<List<string>> FindAvailableSubnetsAsync(
+            string addressSpaceId,
+            string parentCidr,
+            int subnetSize,
+            int count = 1)
+        {
+            return await _performanceService.MeasureAsync(
+                "FindAvailableSubnets",
+                async () =>
+                {
+                    var parentPrefix = new Prefix(parentCidr);
+                    var availableSubnets = new List<string>();
+
+                    // Get all existing IP nodes in the address space
+                    var existingNodes = await _ipNodeRepository.GetChildrenAsync(addressSpaceId, null);
+                    var existingPrefixes = existingNodes
+                        .Select(n => new Prefix(n.Prefix))
+                        .Where(p => p.IsSubnetOf(parentPrefix))
+                        .OrderBy(p => p)
+                        .ToList();
+
+                    // Generate all possible subnets of the desired size
+                    var possibleSubnets = GenerateSubnets(parentPrefix, subnetSize);
+
+                    foreach (var subnet in possibleSubnets)
+                    {
+                        if (availableSubnets.Count >= count) break;
+
+                        // Check if this subnet conflicts with any existing networks
+                        bool isAvailable = !existingPrefixes.Any(existing => 
+                            existing.Contains(subnet) || subnet.Contains(existing) || existing.Equals(subnet));
+
+                        if (isAvailable)
+                        {
+                            availableSubnets.Add(subnet.ToString());
+                        }
+                    }
+
+                    _logger.LogInformation(
+                        "Found {AvailableCount} available subnets out of {RequestedCount} in {ParentCidr}",
+                        availableSubnets.Count, count, parentCidr);
+
+                    return availableSubnets;
+                },
+                new Dictionary<string, object>
+                {
+                    ["AddressSpaceId"] = addressSpaceId,
+                    ["ParentCidr"] = parentCidr,
+                    ["SubnetSize"] = subnetSize,
+                    ["RequestedCount"] = count
+                });
+        }
+
+        /// <summary>
+        /// Calculates IP utilization statistics for a network
+        /// </summary>
+        /// <param name="addressSpaceId">Address space identifier</param>
+        /// <param name="networkCidr">Network CIDR to analyze</param>
+        /// <returns>Utilization statistics</returns>
+        public async Task<IpUtilizationStats> CalculateUtilizationAsync(
+            string addressSpaceId,
+            string networkCidr)
+        {
+            return await _performanceService.MeasureAsync(
+                "CalculateUtilization",
+                async () =>
+                {
+                    var networkPrefix = new Prefix(networkCidr);
+                    var childNodes = await _ipNodeRepository.GetChildrenAsync(addressSpaceId, null);
+                    
+                    var subnets = childNodes
+                        .Select(n => new Prefix(n.Prefix))
+                        .Where(p => networkPrefix.Contains(p))
+                        .ToList();
+
+                    var totalAddresses = CalculateTotalAddresses(networkPrefix);
+                    var allocatedAddresses = subnets.Sum(s => CalculateTotalAddresses(s));
+                    var utilizationPercentage = totalAddresses > 0 ? (double)allocatedAddresses / totalAddresses * 100 : 0;
+
+                    var stats = new IpUtilizationStats
+                    {
+                        NetworkCidr = networkCidr,
+                        TotalAddresses = totalAddresses,
+                        AllocatedAddresses = allocatedAddresses,
+                        AvailableAddresses = totalAddresses - allocatedAddresses,
+                        UtilizationPercentage = utilizationPercentage,
+                        SubnetCount = subnets.Count,
+                        LargestAvailableBlock = await FindLargestAvailableBlockAsync(addressSpaceId, networkCidr),
+                        FragmentationIndex = CalculateFragmentationIndex(subnets, networkPrefix)
+                    };
+
+                    _logger.LogInformation(
+                        "Utilization for {NetworkCidr}: {Utilization:F2}% ({Allocated}/{Total} addresses)",
+                        networkCidr, utilizationPercentage, allocatedAddresses, totalAddresses);
+
+                    return stats;
+                },
+                new Dictionary<string, object>
+                {
+                    ["AddressSpaceId"] = addressSpaceId,
+                    ["NetworkCidr"] = networkCidr
+                });
+        }
+
+        /// <summary>
+        /// Automatically allocates the next available subnet
+        /// </summary>
+        /// <param name="addressSpaceId">Address space identifier</param>
+        /// <param name="parentCidr">Parent network CIDR</param>
+        /// <param name="subnetSize">Desired subnet prefix length</param>
+        /// <param name="tags">Tags to apply to the new subnet</param>
+        /// <returns>The allocated IP node</returns>
+        public async Task<IpNode> AllocateNextSubnetAsync(
+            string addressSpaceId,
+            string parentCidr,
+            int subnetSize,
+            Dictionary<string, string> tags = null)
+        {
+            var availableSubnets = await FindAvailableSubnetsAsync(addressSpaceId, parentCidr, subnetSize, 1);
+            
+            if (!availableSubnets.Any())
+            {
+                throw new InvalidOperationException($"No available subnets of size /{subnetSize} in {parentCidr}");
+            }
+
+            var allocatedCidr = availableSubnets.First();
+            return await _ipTreeService.CreateIpNodeAsync(addressSpaceId, allocatedCidr, tags ?? new Dictionary<string, string>());
+        }
+
+        /// <summary>
+        /// Validates that a proposed subnet allocation doesn't conflict with existing allocations
+        /// </summary>
+        /// <param name="addressSpaceId">Address space identifier</param>
+        /// <param name="proposedCidr">Proposed subnet CIDR</param>
+        /// <returns>Validation result with conflict details</returns>
+        public async Task<SubnetValidationResult> ValidateSubnetAllocationAsync(
+            string addressSpaceId,
+            string proposedCidr)
+        {
+            var proposedPrefix = new Prefix(proposedCidr);
+            var existingNodes = await _ipNodeRepository.GetChildrenAsync(addressSpaceId, null);
+            var conflicts = new List<string>();
+
+            foreach (var node in existingNodes)
+            {
+                var existingPrefix = new Prefix(node.Prefix);
+                
+                if (existingPrefix.Contains(proposedPrefix) || 
+                    proposedPrefix.Contains(existingPrefix) || 
+                    existingPrefix.Equals(proposedPrefix))
+                {
+                    conflicts.Add(node.Prefix);
+                }
+            }
+
+            return new SubnetValidationResult
+            {
+                IsValid = !conflicts.Any(),
+                ProposedCidr = proposedCidr,
+                ConflictingSubnets = conflicts,
+                ValidationMessage = conflicts.Any() 
+                    ? $"Subnet {proposedCidr} conflicts with existing allocations: {string.Join(", ", conflicts)}"
+                    : "Subnet allocation is valid"
+            };
+        }
+
+        private List<Prefix> GenerateSubnets(Prefix parentPrefix, int subnetSize)
+        {
+            var subnets = new List<Prefix>();
+            
+            if (subnetSize <= parentPrefix.PrefixLength)
+                return subnets; // Cannot create larger subnets
+
+            try
+            {
+                var currentPrefix = parentPrefix;
+                var queue = new Queue<Prefix>();
+                queue.Enqueue(currentPrefix);
+
+                while (queue.Count > 0)
+                {
+                    var current = queue.Dequeue();
+                    
+                    if (current.PrefixLength == subnetSize)
+                    {
+                        subnets.Add(current);
+                    }
+                    else if (current.PrefixLength < subnetSize)
+                    {
+                        var childSubnets = current.GetSubnets();
+                        foreach (var child in childSubnets)
+                        {
+                            queue.Enqueue(child);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error generating subnets for {ParentPrefix} with size {SubnetSize}", 
+                    parentPrefix, subnetSize);
+            }
+
+            return subnets.OrderBy(s => s).ToList();
+        }
+
+        private long CalculateTotalAddresses(Prefix prefix)
+        {
+            var hostBits = (prefix.IsIPv4 ? 32 : 128) - prefix.PrefixLength;
+            return hostBits >= 63 ? long.MaxValue : (1L << hostBits);
+        }
+
+        private async Task<string> FindLargestAvailableBlockAsync(string addressSpaceId, string networkCidr)
+        {
+            // Simplified implementation - find the largest gap between allocated subnets
+            var availableSubnets = await FindAvailableSubnetsAsync(addressSpaceId, networkCidr, 24, 100);
+            return availableSubnets.FirstOrDefault() ?? "None";
+        }
+
+        private double CalculateFragmentationIndex(List<Prefix> subnets, Prefix parentPrefix)
+        {
+            if (!subnets.Any()) return 0.0;
+
+            // Simple fragmentation metric: ratio of allocated blocks to total possible blocks
+            var averageSubnetSize = subnets.Average(s => s.PrefixLength);
+            var maxPossibleBlocks = Math.Pow(2, averageSubnetSize - parentPrefix.PrefixLength);
+            return subnets.Count / maxPossibleBlocks;
+        }
+    }
+
+    /// <summary>
+    /// IP utilization statistics for a network
+    /// </summary>
+    public class IpUtilizationStats
+    {
+        public string NetworkCidr { get; set; }
+        public long TotalAddresses { get; set; }
+        public long AllocatedAddresses { get; set; }
+        public long AvailableAddresses { get; set; }
+        public double UtilizationPercentage { get; set; }
+        public int SubnetCount { get; set; }
+        public string LargestAvailableBlock { get; set; }
+        public double FragmentationIndex { get; set; }
+    }
+
+    /// <summary>
+    /// Result of subnet allocation validation
+    /// </summary>
+    public class SubnetValidationResult
+    {
+        public bool IsValid { get; set; }
+        public string ProposedCidr { get; set; }
+        public List<string> ConflictingSubnets { get; set; } = new List<string>();
+        public string ValidationMessage { get; set; }
+    }
+}

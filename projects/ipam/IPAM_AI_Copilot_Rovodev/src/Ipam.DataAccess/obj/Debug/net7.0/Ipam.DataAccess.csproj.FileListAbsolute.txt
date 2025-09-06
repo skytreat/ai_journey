@@ -1,0 +1,12 @@
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.csproj.AssemblyReference.cache
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.AssemblyInfoInputs.cache
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.AssemblyInfo.cs
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\bin\Debug\net7.0\Ipam.DataAccess.deps.json
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\bin\Debug\net7.0\Ipam.DataAccess.dll
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\bin\Debug\net7.0\Ipam.DataAccess.pdb
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.dll
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\refint\Ipam.DataAccess.dll
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\Ipam.DataAccess.pdb
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.DataAccess\obj\Debug\net7.0\ref\Ipam.DataAccess.dll

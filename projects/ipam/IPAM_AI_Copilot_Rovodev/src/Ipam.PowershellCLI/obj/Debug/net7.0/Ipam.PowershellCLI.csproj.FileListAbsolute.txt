@@ -1,0 +1,5 @@
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.csproj.AssemblyReference.cache
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.AssemblyInfoInputs.cache
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.AssemblyInfo.cs
+D:\workspace\vscode\IPAM_AI_Copilot_Rovodev\src\Ipam.PowershellCLI\obj\Debug\net7.0\Ipam.PowershellCLI.csproj.CoreCompileInputs.cache
