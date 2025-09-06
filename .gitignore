@@ -423,8 +423,8 @@ local.settings.json
 
 # Docker
 .dockerignore
-Dockerfile*
-docker-compose*
+# Dockerfile*
+# docker-compose*
 
 # Terraform
 *.tfstate
@@ -436,10 +436,10 @@ docker-compose*
 *.kubeconfig
 
 # Application specific
-appsettings.Development.json
-appsettings.Local.json
-appsettings.Production.json
-secrets.json
+# appsettings.Development.json
+# appsettings.Local.json
+# appsettings.Production.json
+# secrets.json
 
 # Coverage reports
 coverage/
