@@ -1,0 +1,14 @@
+D:\workspace\vscode\console\TestGarden\bin\Debug\net8.0\TestGarden.exe
+D:\workspace\vscode\console\TestGarden\bin\Debug\net8.0\TestGarden.deps.json
+D:\workspace\vscode\console\TestGarden\bin\Debug\net8.0\TestGarden.runtimeconfig.json
+D:\workspace\vscode\console\TestGarden\bin\Debug\net8.0\TestGarden.dll
+D:\workspace\vscode\console\TestGarden\bin\Debug\net8.0\TestGarden.pdb
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.AssemblyInfoInputs.cache
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.AssemblyInfo.cs
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.dll
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\refint\TestGarden.dll
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.pdb
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\TestGarden.genruntimeconfig.cache
+D:\workspace\vscode\console\TestGarden\obj\Debug\net8.0\ref\TestGarden.dll

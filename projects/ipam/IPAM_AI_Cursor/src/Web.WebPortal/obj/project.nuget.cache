@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "IeYA6IZi16M=",
+  "success": true,
+  "projectFilePath": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Web.WebPortal\\Web.WebPortal.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.aspnetcore.authentication.openidconnect\\8.0.19\\microsoft.aspnetcore.authentication.openidconnect.8.0.19.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.identitymodel.abstractions\\7.1.2\\microsoft.identitymodel.abstractions.7.1.2.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\7.1.2\\microsoft.identitymodel.jsonwebtokens.7.1.2.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.identitymodel.logging\\7.1.2\\microsoft.identitymodel.logging.7.1.2.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.identitymodel.protocols\\7.1.2\\microsoft.identitymodel.protocols.7.1.2.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\7.1.2\\microsoft.identitymodel.protocols.openidconnect.7.1.2.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\microsoft.identitymodel.tokens\\7.1.2\\microsoft.identitymodel.tokens.7.1.2.nupkg.sha512",
+    "C:\\Users\\tuanyuan\\.nuget\\packages\\system.identitymodel.tokens.jwt\\7.1.2\\system.identitymodel.tokens.jwt.7.1.2.nupkg.sha512"
+  ],
+  "logs": []
+}

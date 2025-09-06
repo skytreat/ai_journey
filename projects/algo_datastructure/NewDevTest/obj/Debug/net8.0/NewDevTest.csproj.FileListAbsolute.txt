@@ -1,0 +1,14 @@
+D:\workspace\vscode\console\NewDevTest\bin\Debug\net8.0\NewDevTest.exe
+D:\workspace\vscode\console\NewDevTest\bin\Debug\net8.0\NewDevTest.deps.json
+D:\workspace\vscode\console\NewDevTest\bin\Debug\net8.0\NewDevTest.runtimeconfig.json
+D:\workspace\vscode\console\NewDevTest\bin\Debug\net8.0\NewDevTest.dll
+D:\workspace\vscode\console\NewDevTest\bin\Debug\net8.0\NewDevTest.pdb
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.AssemblyInfoInputs.cache
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.AssemblyInfo.cs
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.dll
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\refint\NewDevTest.dll
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.pdb
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\NewDevTest.genruntimeconfig.cache
+D:\workspace\vscode\console\NewDevTest\obj\Debug\net8.0\ref\NewDevTest.dll

@@ -1,0 +1,91 @@
+@model IPAM.Contracts.PaginatedResult<object>
+@{
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+    var baseUrl = currentUrl.ToString().Split('&').Where(p => !p.StartsWith("pageNumber=") && !p.StartsWith("pageSize=")).FirstOrDefault() ?? "/";
+    if (!baseUrl.Contains("?")) baseUrl += "?";
+    else if (!baseUrl.EndsWith("&")) baseUrl += "&";
+}
+
+@if (Model.TotalPages > 1)
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center">
+            <label class="me-2">Page size:</label>
+            <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                <option value="10" @(Model.PageSize == 10 ? "selected" : "")>10</option>
+                <option value="20" @(Model.PageSize == 20 ? "selected" : "")>20</option>
+                <option value="50" @(Model.PageSize == 50 ? "selected" : "")>50</option>
+                <option value="100" @(Model.PageSize == 100 ? "selected" : "")>100</option>
+            </select>
+        </div>
+        
+        <div class="text-muted">
+            Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount) of @Model.TotalCount entries
+        </div>
+    </div>
+
+    <nav aria-label="Pagination">
+        <ul class="pagination justify-content-center">
+            @if (Model.PageNumber > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@(baseUrl)pageNumber=@(Model.PageNumber - 1)&pageSize=@Model.PageSize">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            }
+            
+            @{
+                var startPage = Math.Max(1, Model.PageNumber - 2);
+                var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+                
+                if (startPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="@(baseUrl)pageNumber=1&pageSize=@Model.PageSize">1</a>
+                    </li>
+                    if (startPage > 2)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                }
+                
+                for (int i = startPage; i <= endPage; i++)
+                {
+                    <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                        <a class="page-link" href="@(baseUrl)pageNumber=@i&pageSize=@Model.PageSize">@i</a>
+                    </li>
+                }
+                
+                if (endPage < Model.TotalPages)
+                {
+                    if (endPage < Model.TotalPages - 1)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                    <li class="page-item">
+                        <a class="page-link" href="@(baseUrl)pageNumber=@Model.TotalPages&pageSize=@Model.PageSize">@Model.TotalPages</a>
+                    </li>
+                }
+            }
+            
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@(baseUrl)pageNumber=@(Model.PageNumber + 1)&pageSize=@Model.PageSize">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
+
+<script>
+function changePageSize(newSize) {
+    const url = new URL(window.location);
+    url.searchParams.set('pageSize', newSize);
+    url.searchParams.set('pageNumber', '1');
+    window.location.href = url.toString();
+}
+</script>

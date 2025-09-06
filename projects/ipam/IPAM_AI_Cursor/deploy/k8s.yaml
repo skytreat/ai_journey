@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ipam
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ipam-frontend
+  namespace: ipam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ipam-frontend
+  template:
+    metadata:
+      labels:
+        app: ipam-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ipam/frontend:latest
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipam-frontend
+  namespace: ipam
+spec:
+  selector:
+    app: ipam-frontend
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ipam-gateway
+  namespace: ipam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ipam-gateway
+  template:
+    metadata:
+      labels:
+        app: ipam-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: ipam/gateway:latest
+        env:
+        - name: YARP__Clusters__frontend__Destinations__d1__Address
+          value: http://ipam-frontend.ipam.svc.cluster.local:80
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipam-gateway
+  namespace: ipam
+spec:
+  selector:
+    app: ipam-gateway
+  ports:
+  - port: 80
+    targetPort: 8080

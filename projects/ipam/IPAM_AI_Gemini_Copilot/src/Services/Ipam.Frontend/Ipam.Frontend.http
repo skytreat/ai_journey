@@ -1,0 +1,6 @@
+@Ipam.Frontend_HostAddress = http://localhost:5010
+
+GET {{Ipam.Frontend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,146 @@
+{
+  "count": 261626,
+  "next": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/ip-addresses/?limit=25&offset=25",
+  "previous": null,
+  "results": [
+    {
+      "id": "1469a94b-6808-49fc-b629-6743883c6934",
+      "display": "::1/128",
+      "url": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/ip-addresses/1469a94b-6808-49fc-b629-6743883c6934/",
+      "family": {
+        "value": 6,
+        "label": "IPv6"
+      },
+      "address": "::1/128",
+      "vrf": {
+        "id": "36476a13-c4ed-5bb3-a73a-6039d3f2a7a0",
+        "url": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/vrfs/36476a13-c4ed-5bb3-a73a-6039d3f2a7a0/",
+        "name": "NSV",
+        "rd": null,
+        "display": "NSV"
+      },
+      "tenant": {
+        "display": "NSV",
+        "id": "67644d9e-c5b8-5971-b345-1e4fd7712ae3",
+        "url": "https://nautobot.service.prd.itauto.nvidia.com/api/tenancy/tenants/67644d9e-c5b8-5971-b345-1e4fd7712ae3/",
+        "name": "NSV",
+        "slug": "nsv"
+      },
+      "status": {
+        "value": "active",
+        "label": "Active"
+      },
+      "role": null,
+      "assigned_object_type": "dcim.interface",
+      "assigned_object_id": "6be05228-dd5a-4896-96bc-951e5b819312",
+      "assigned_object": {
+        "display": "mgmt",
+        "id": "6be05228-dd5a-4896-96bc-951e5b819312",
+        "url": "https://nautobot.service.prd.itauto.nvidia.com/api/dcim/interfaces/6be05228-dd5a-4896-96bc-951e5b819312/",
+        "device": {
+          "display": "sjc11-b03-ipmi-01",
+          "id": "de8fe9a6-fc94-54fb-ad89-f7a2f8c75328",
+          "url": "https://nautobot.service.prd.itauto.nvidia.com/api/dcim/devices/de8fe9a6-fc94-54fb-ad89-f7a2f8c75328/",
+          "name": "sjc11-b03-ipmi-01"
+        },
+        "name": "mgmt",
+        "cable": null
+      },
+      "nat_inside": null,
+      "nat_outside": null,
+      "dns_name": "",
+      "description": "",
+      "created": "2024-10-03",
+      "last_updated": "2024-11-15T15:07:41.429568Z",
+      "tags": [
+        {
+          "display": "office",
+          "id": "1ab49426-fbf8-5417-b4c4-3ceca7a675b0",
+          "url": "https://nautobot.service.prd.itauto.nvidia.com/api/extras/tags/1ab49426-fbf8-5417-b4c4-3ceca7a675b0/",
+          "name": "NGC-CFA-MANAGED",
+          "slug": "ngc-cfa-managed",
+          "color": "9e9e9e",
+          "created": "2023-04-06",
+          "last_updated": "2023-08-01T19:54:47.428633Z"
+        }
+      ],
+      "notes_url": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/ip-addresses/1469a94b-6808-49fc-b629-6743883c6934/notes/",
+      "custom_fields": {
+        "building": null,
+        "nw_discovery": null,
+        "owner": null,
+        "resource_id": null,
+        "resource_info": null
+      }
+    },{
+        "id": "1469a94b-6808-49fc-b629-6743883c6934",
+        "display": "::1/128",
+        "url": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/ip-addresses/1469a94b-6808-49fc-b629-6743883c6934/",
+        "family": {
+          "value": 6,
+          "label": "IPv6"
+        },
+        "address": "::1/128",
+        "vrf": {
+          "id": "36476a13-c4ed-5bb3-a73a-6039d3f2a7a0",
+          "url": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/vrfs/36476a13-c4ed-5bb3-a73a-6039d3f2a7a0/",
+          "name": "NSV",
+          "rd": null,
+          "display": "NSV"
+        },
+        "tenant": {
+          "display": "NSV",
+          "id": "67644d9e-c5b8-5971-b345-1e4fd7712ae3",
+          "url": "https://nautobot.service.prd.itauto.nvidia.com/api/tenancy/tenants/67644d9e-c5b8-5971-b345-1e4fd7712ae3/",
+          "name": "NSV",
+          "slug": "nsv"
+        },
+        "status": {
+          "value": "active",
+          "label": "Active"
+        },
+        "role": null,
+        "assigned_object_type": "dcim.interface",
+        "assigned_object_id": "6be05228-dd5a-4896-96bc-951e5b819312",
+        "assigned_object": {
+          "display": "mgmt",
+          "id": "6be05228-dd5a-4896-96bc-951e5b819312",
+          "url": "https://nautobot.service.prd.itauto.nvidia.com/api/dcim/interfaces/6be05228-dd5a-4896-96bc-951e5b819312/",
+          "device": {
+            "display": "sjc11-b03-ipmi-01",
+            "id": "de8fe9a6-fc94-54fb-ad89-f7a2f8c75328",
+            "url": "https://nautobot.service.prd.itauto.nvidia.com/api/dcim/devices/de8fe9a6-fc94-54fb-ad89-f7a2f8c75328/",
+            "name": "sjc11-b03-ipmi-01"
+          },
+          "name": "mgmt",
+          "cable": null
+        },
+        "nat_inside": null,
+        "nat_outside": null,
+        "dns_name": "",
+        "description": "",
+        "created": "2024-10-03",
+        "last_updated": "2024-11-15T15:07:41.429568Z",
+        "tags": [
+          {
+            "display": "office1",
+            "id": "1ab49426-fbf8-5417-b4c4-3ceca7a675b0",
+            "url": "https://nautobot.service.prd.itauto.nvidia.com/api/extras/tags/1ab49426-fbf8-5417-b4c4-3ceca7a675b0/",
+            "name": "NGC-CFA-MANAGED",
+            "slug": "ngc-cfa-managed",
+            "color": "9e9e9e",
+            "created": "2023-04-06",
+            "last_updated": "2023-08-01T19:54:47.428633Z"
+          }
+        ],
+        "notes_url": "https://nautobot.service.prd.itauto.nvidia.com/api/ipam/ip-addresses/1469a94b-6808-49fc-b629-6743883c6934/notes/",
+        "custom_fields": {
+          "building": null,
+          "nw_discovery": null,
+          "owner": null,
+          "resource_id": null,
+          "resource_info": null
+        }
+      }
+    ]
+}

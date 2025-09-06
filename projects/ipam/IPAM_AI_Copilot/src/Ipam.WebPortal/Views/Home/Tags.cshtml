@@ -1,0 +1,35 @@
+@model IEnumerable<Ipam.DataAccess.Models.Tag>
+@{
+    ViewData["Title"] = "Tags";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Tags</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Created On</th>
+            <th>Modified On</th>
+            <th>Type</th>
+            <th>Known Values</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var tag in Model)
+        {
+            <tr>
+                <td>@tag.Name</td>
+                <td>@tag.Description</td>
+                <td>@tag.CreatedOn</td>
+                <td>@tag.ModifiedOn</td>
+                <td>@tag.Type</td>
+                <td>@string.Join(", ", tag.KnownValues)</td>
+                <td>@tag.Value</td>
+            </tr>
+        }
+    </tbody>
+</table>

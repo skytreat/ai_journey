@@ -1,0 +1,49 @@
+
+@model Ipam.Dto.IpAddressDto
+
+@{    ViewData["Title"] = "IP Address Details";
+    var addressSpaceId = ViewBag.AddressSpaceId;
+}
+
+<h1>IP Address Details</h1>
+
+<div>
+    <h4>IP Address</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Prefix)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Prefix)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Tags)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Tags)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.ParentId)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.ParentId)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CreatedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CreatedOn)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.ModifiedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.ModifiedOn)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-addressSpaceId="@addressSpaceId" asp-route-id="@Model.Id">Edit</a> |
+    <a asp-action="Index" asp-route-addressSpaceId="@addressSpaceId">Back to List</a>
+</div>

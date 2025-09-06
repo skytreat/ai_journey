@@ -1,0 +1,190 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj": {}
+  },
+  "projects": {
+    "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.Client\\Ipam.Client.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.Client\\Ipam.Client.csproj",
+        "projectName": "Ipam.Client",
+        "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.Client\\Ipam.Client.csproj",
+        "packagesPath": "C:\\Users\\tuanyuan\\.nuget\\packages\\",
+        "outputPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.Client\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\tuanyuan\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net7.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net7.0": {
+            "targetAlias": "net7.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net7.0": {
+          "targetAlias": "net7.0",
+          "dependencies": {
+            "Microsoft.Extensions.Http": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "System.Net.Http.Json": {
+              "target": "Package",
+              "version": "[7.0.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj",
+        "projectName": "ipam-cli",
+        "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.PowershellCLI\\Ipam.PowershellCLI.csproj",
+        "packagesPath": "C:\\Users\\tuanyuan\\.nuget\\packages\\",
+        "outputPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.PowershellCLI\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\tuanyuan\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net7.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net7.0": {
+            "targetAlias": "net7.0",
+            "projectReferences": {
+              "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.Client\\Ipam.Client.csproj": {
+                "projectPath": "D:\\workspace\\vscode\\IPAM_AI_Copilot\\src\\Ipam.Client\\Ipam.Client.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net7.0": {
+          "targetAlias": "net7.0",
+          "dependencies": {
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.3, )"
+            },
+            "System.CommandLine": {
+              "target": "Package",
+              "version": "[2.0.0-beta4.22272.1, )"
+            },
+            "System.CommandLine.NamingConventionBinder": {
+              "target": "Package",
+              "version": "[2.0.0-beta4.22272.1, )"
+            },
+            "System.Management.Automation": {
+              "target": "Package",
+              "version": "[7.3.9, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

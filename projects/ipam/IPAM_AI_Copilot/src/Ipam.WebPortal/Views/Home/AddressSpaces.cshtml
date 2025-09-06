@@ -1,0 +1,31 @@
+@model IEnumerable<Ipam.DataAccess.Models.AddressSpace>
+@{
+    ViewData["Title"] = "Address Spaces";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Address Spaces</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Created On</th>
+            <th>Modified On</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var addressSpace in Model)
+        {
+            <tr>
+                <td>@addressSpace.Id</td>
+                <td>@addressSpace.Name</td>
+                <td>@addressSpace.Description</td>
+                <td>@addressSpace.CreatedOn</td>
+                <td>@addressSpace.ModifiedOn</td>
+            </tr>
+        }
+    </tbody>
+</table>

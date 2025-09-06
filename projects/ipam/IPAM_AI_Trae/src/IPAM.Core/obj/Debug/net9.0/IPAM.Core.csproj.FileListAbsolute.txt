@@ -1,0 +1,11 @@
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\bin\Debug\net9.0\IPAM.Core.deps.json
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\bin\Debug\net9.0\IPAM.Core.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\bin\Debug\net9.0\IPAM.Core.pdb
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\IPAM.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\IPAM.Core.AssemblyInfoInputs.cache
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\IPAM.Core.AssemblyInfo.cs
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\IPAM.Core.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\IPAM.Core.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\refint\IPAM.Core.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\IPAM.Core.pdb
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Core\obj\Debug\net9.0\ref\IPAM.Core.dll

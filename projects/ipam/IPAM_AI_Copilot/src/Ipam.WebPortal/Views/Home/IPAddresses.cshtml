@@ -1,0 +1,35 @@
+@model IEnumerable<Ipam.DataAccess.Models.IPAddress>
+@{
+    ViewData["Title"] = "IP Addresses";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>IP Addresses</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Prefix</th>
+            <th>Tags</th>
+            <th>Created On</th>
+            <th>Modified On</th>
+            <th>Parent ID</th>
+            <th>Address Space ID</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var ipAddress in Model)
+        {
+            <tr>
+                <td>@ipAddress.Id</td>
+                <td>@ipAddress.Prefix</td>
+                <td>@string.Join(", ", ipAddress.Tags)</td>
+                <td>@ipAddress.CreatedOn</td>
+                <td>@ipAddress.ModifiedOn</td>
+                <td>@ipAddress.ParentId</td>
+                <td>@ipAddress.AddressSpaceId</td>
+            </tr>
+        }
+    </tbody>
+</table>

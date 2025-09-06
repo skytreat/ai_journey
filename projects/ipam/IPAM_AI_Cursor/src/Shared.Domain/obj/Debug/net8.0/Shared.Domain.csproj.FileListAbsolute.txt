@@ -1,0 +1,11 @@
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\bin\Debug\net8.0\Shared.Domain.deps.json
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\bin\Debug\net8.0\Shared.Domain.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\bin\Debug\net8.0\Shared.Domain.pdb
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\Shared.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\Shared.Domain.AssemblyInfoInputs.cache
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\Shared.Domain.AssemblyInfo.cs
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\Shared.Domain.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\Shared.Domain.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\refint\Shared.Domain.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\Shared.Domain.pdb
+D:\workspace\vscode\IPAM_AI_Cursor\src\Shared.Domain\obj\Debug\net8.0\ref\Shared.Domain.dll

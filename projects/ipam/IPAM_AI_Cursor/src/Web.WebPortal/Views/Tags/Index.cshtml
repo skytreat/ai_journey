@@ -1,0 +1,80 @@
+@model List<Web.WebPortal.Controllers.TagVm>
+@{
+	ViewData["Title"] = "Tags";
+	var addressSpaceId = ViewBag.AddressSpaceId;
+	var pagination = ViewBag.Pagination as IPAM.Contracts.PaginatedResult<Web.WebPortal.Controllers.TagVm>;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+	<h1><i class="bi bi-tags"></i> Tags for Address Space</h1>
+	<div>
+		<a href="/Tags/Create?addressSpaceId=@addressSpaceId" class="btn btn-primary">
+			<i class="bi bi-plus-circle"></i> Create New Tag
+		</a>
+		<a href="/" class="btn btn-outline-secondary">
+			<i class="bi bi-arrow-left"></i> Back to Address Spaces
+		</a>
+	</div>
+</div>
+
+@if (Model.Any())
+{
+	<div class="card">
+		<div class="card-body">
+			<div class="table-responsive">
+				<table class="table table-striped table-hover">
+					<thead class="table-light">
+						<tr>
+							<th><i class="bi bi-tag"></i> Name</th>
+							<th><i class="bi bi-info-circle"></i> Description</th>
+							<th><i class="bi bi-type"></i> Type</th>
+							<th><i class="bi bi-gear"></i> Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in Model)
+						{
+							<tr>
+								<td><strong>@item.Name</strong></td>
+								<td>@item.Description</td>
+								<td>
+									<span class="badge @(item.Type == "Inheritable" ? "bg-success" : "bg-info")">
+										@item.Type
+									</span>
+								</td>
+								<td>
+									<div class="btn-group" role="group">
+										<a href="/Tags/Edit?addressSpaceId=@addressSpaceId&name=@item.Name" class="btn btn-sm btn-outline-warning">
+											<i class="bi bi-pencil"></i> Edit
+										</a>
+										<form method="post" action="/Tags/Delete?addressSpaceId=@addressSpaceId&name=@item.Name" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete tag \'@item.Name\'?')">
+											<button type="submit" class="btn btn-sm btn-outline-danger">
+												<i class="bi bi-trash"></i> Delete
+											</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	@if (pagination != null)
+	{
+		@await Html.PartialAsync("_Pagination", pagination)
+	}
+}
+else
+{
+	<div class="text-center py-5">
+		<i class="bi bi-tags display-1 text-muted"></i>
+		<h3 class="text-muted mt-3">No Tags Found</h3>
+		<p class="text-muted">This address space doesn't have any tags yet.</p>
+		<a href="/Tags/Create?addressSpaceId=@addressSpaceId" class="btn btn-primary btn-lg">
+			<i class="bi bi-plus-circle"></i> Create First Tag
+		</a>
+	</div>
+}

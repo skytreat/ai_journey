@@ -1,0 +1,8 @@
+{
+  "info": { "name": "IPAM Dev", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    { "name": "Health", "request": { "method": "GET", "url": "http://localhost:5080/health" } },
+    { "name": "List AddressSpaces", "request": { "method": "GET", "url": "http://localhost:5080/api/v1/address-spaces" } },
+    { "name": "Create AddressSpace", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"name\": \"AS-Dev\",\n  \"description\": \"Dev space\"\n}" }, "url": "http://localhost:5080/api/v1/address-spaces" } }
+  ]
+}

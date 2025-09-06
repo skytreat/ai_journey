@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "Home Page";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome to IPAM Web Portal</h1>
+    <p>This portal allows you to manage IP address spaces, IP addresses, and tags.</p>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <h2>Address Spaces</h2>
+            <p>Manage your IP address spaces.</p>
+            <p><a class="btn btn-primary" href="@Url.Action("AddressSpaces", "Home")">View Address Spaces</a></p>
+        </div>
+        <div class="col-md-4">
+            <h2>IP Addresses</h2>
+            <p>Manage your IP addresses.</p>
+            <p><a class="btn btn-primary" href="@Url.Action("IPAddresses", "Home")">View IP Addresses</a></p>
+        </div>
+        <div class="col-md-4">
+            <h2>Tags</h2>
+            <p>Manage your tags.</p>
+            <p><a class="btn btn-primary" href="@Url.Action("Tags", "Home")">View Tags</a></p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\bin\Debug\net8.0\Clients.SDK.deps.json
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\bin\Debug\net8.0\Clients.SDK.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\bin\Debug\net8.0\Clients.SDK.pdb
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\bin\Debug\net8.0\Shared.Contracts.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\bin\Debug\net8.0\Shared.Contracts.pdb
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.csproj.AssemblyReference.cache
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.AssemblyInfoInputs.cache
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.AssemblyInfo.cs
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients..5366A826.Up2Date
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\refint\Clients.SDK.dll
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\Clients.SDK.pdb
+D:\workspace\vscode\IPAM_AI_Cursor\src\Clients.SDK\obj\Debug\net8.0\ref\Clients.SDK.dll

@@ -1,0 +1,49 @@
+@page
+@model IPAM.Web.Pages.Tags.IndexModel
+
+<h1>Tags</h1>
+
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-4">
+            <input type="text" name="searchString" class="form-control" placeholder="Search by name or description" value="@Model.SearchString" />
+        </div>
+        <div class="col-md-3">
+            <select name="tagType" class="form-control" asp-items="Model.TagTypes">
+                <option value="">-- All Types --</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </div>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Type</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Tags)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.Description</td>
+                <td>@item.Type</td>
+                <td>
+                    <a asp-page="./Edit" asp-route-id="@item.Name">Edit</a> |
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@item.Name" style="display:inline">
+                        <button type="submit" class="btn btn-link">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-page="./Create" class="btn btn-primary">Create New</a>

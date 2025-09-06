@@ -1,0 +1,49 @@
+@page
+@model IPAM.Web.Pages.IPs.IndexModel
+
+<h1>IP Addresses</h1>
+
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-4">
+            <input type="text" name="searchString" class="form-control" placeholder="Search by prefix or tag" value="@Model.SearchString" />
+        </div>
+        <div class="col-md-3">
+            <select name="addressSpaceId" class="form-control" asp-items="Model.AddressSpaces">
+                <option value="">-- All Address Spaces --</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </div>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Prefix</th>
+            <th>Address Space</th>
+            <th>Tags</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.IPs)
+        {
+            <tr>
+                <td>@item.Prefix</td>
+                <td>@item.AddressSpace?.Name</td>
+                <td>@string.Join(", ", item.Tags?.Keys ?? new List<string>())</td>
+                <td>
+                    <a asp-page="./Edit" asp-route-id="@item.Id">Edit</a> |
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" style="display:inline">
+                        <button type="submit" class="btn btn-link">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-page="./Create" class="btn btn-primary">Create New</a>

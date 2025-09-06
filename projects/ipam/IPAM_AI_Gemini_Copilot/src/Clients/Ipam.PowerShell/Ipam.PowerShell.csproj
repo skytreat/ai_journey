@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+    <AssemblyName>Ipam.PowerShell</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ipam.Client\Ipam.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management.Automation" Version="7.4.1" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="if not exist &quot;$(UserProfile)\Documents\PowerShell\Modules\Ipam.PowerShell&quot; mkdir &quot;$(UserProfile)\Documents\PowerShell\Modules\Ipam.PowerShell&quot;" />
+    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(UserProfile)\Documents\PowerShell\Modules\Ipam.PowerShell\&quot;" />
+    <Exec Command="copy &quot;$(TargetDir)Ipam.Client.dll&quot; &quot;$(UserProfile)\Documents\PowerShell\Modules\Ipam.PowerShell\&quot;" />
+    <Exec Command="copy &quot;$(TargetDir)Ipam.Dto.dll&quot; &quot;$(UserProfile)\Documents\PowerShell\Modules\Ipam.PowerShell\&quot;" />
+  </Target>
+
+</Project>

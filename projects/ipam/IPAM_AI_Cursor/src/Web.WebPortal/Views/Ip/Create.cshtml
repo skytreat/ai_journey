@@ -1,0 +1,45 @@
+@model Web.WebPortal.Controllers.IpCreateVm
+@{
+	ViewData["Title"] = "Create IP Address";
+	var addressSpaceId = ViewBag.AddressSpaceId;
+}
+
+<div class="row justify-content-center">
+	<div class="col-md-8 col-lg-6">
+		<div class="card">
+			<div class="card-header">
+				<h2 class="mb-0"><i class="bi bi-plus-circle"></i> Create New IP Address</h2>
+			</div>
+			<div class="card-body">
+				<form method="post" action="/Ip/Create">
+					<input type="hidden" name="addressSpaceId" value="@addressSpaceId" />
+					<div class="mb-3">
+						<label class="form-label fw-bold" asp-for="Prefix">
+							<i class="bi bi-diagram-3"></i> CIDR Prefix <span class="text-danger">*</span>
+						</label>
+						<input class="form-control" asp-for="Prefix" placeholder="e.g., 192.168.1.0/24 or 2001:db8::/32" />
+						<span asp-validation-for="Prefix" class="text-danger"></span>
+						<div class="form-text">
+							<small class="text-muted">
+								<i class="bi bi-info-circle"></i> Enter the IP address range in CIDR notation (e.g., 192.168.1.0/24 for IPv4 or 2001:db8::/32 for IPv6).
+							</small>
+						</div>
+					</div>
+					<div class="d-flex gap-2">
+						<button type="submit" class="btn btn-primary">
+							<i class="bi bi-check-circle"></i> Create IP Address
+						</button>
+						<a class="btn btn-outline-secondary" href="/Ip?addressSpaceId=@addressSpaceId">
+							<i class="bi bi-x-circle"></i> Cancel
+						</a>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+@section Scripts {
+	<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jquery-validation-unobtrusive@4.0.0/dist/jquery.validate.unobtrusive.min.js"></script>
+}

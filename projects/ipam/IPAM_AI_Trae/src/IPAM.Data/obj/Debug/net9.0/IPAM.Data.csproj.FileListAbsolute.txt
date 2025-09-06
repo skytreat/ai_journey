@@ -1,0 +1,15 @@
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.csproj.AssemblyReference.cache
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.AssemblyInfoInputs.cache
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.AssemblyInfo.cs
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.csproj.CoreCompileInputs.cache
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\bin\Debug\net9.0\IPAM.Data.deps.json
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\bin\Debug\net9.0\IPAM.Data.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\bin\Debug\net9.0\IPAM.Data.pdb
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\bin\Debug\net9.0\IPAM.Core.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\bin\Debug\net9.0\IPAM.Core.pdb
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.csproj.Up2Date
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\refint\IPAM.Data.dll
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\IPAM.Data.pdb
+D:\workspace\vscode\IPAM_AI_Trae\src\IPAM.Data\obj\Debug\net9.0\ref\IPAM.Data.dll

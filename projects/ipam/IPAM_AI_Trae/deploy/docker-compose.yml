@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  ipam.api:
+    build:
+      context: ../src/IPAM.API
+      dockerfile: Dockerfile
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Azure__StorageConnectionString=UseDevelopmentStorage=true
+    depends_on:
+      - azurite
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ipam.web:
+    build:
+      context: ../src/IPAM.Web
+      dockerfile: Dockerfile
+    ports:
+      - "5001:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - API__BaseUrl=http://ipam.api
+    depends_on:
+      ipam.api:
+        condition: service_healthy
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - azurite-data:/data
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    depends_on:
+      - ipam.api
+      - ipam.web
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-dashboard.json:/etc/grafana/provisioning/dashboards/ipam.json
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+volumes:
+  azurite-data:
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,39 @@
+
+version: '3.8'
+
+services:
+  ipam.frontend:
+    build:
+      context: .
+      dockerfile: src/Services/Ipam.Frontend/Dockerfile
+    ports:
+      - "7001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__AzureTableStorage=UseDevelopmentStorage=true
+      - JwtSettings__SecretKey=THIS IS A SUPER SECRET KEY THAT SHOULD BE REPLACED
+      - JwtSettings__Issuer=IpamApi
+      - JwtSettings__Audience=IpamApiClient
+
+  apigateway:
+    build:
+      context: .
+      dockerfile: src/Gateways/ApiGateway/Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - ipam.frontend
+
+  ipam.web:
+    build:
+      context: .
+      dockerfile: src/Clients/Ipam.Web/Dockerfile
+    ports:
+      - "7002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - IpamApiBaseUrl=http://apigateway:8080
+    depends_on:
+      - apigateway

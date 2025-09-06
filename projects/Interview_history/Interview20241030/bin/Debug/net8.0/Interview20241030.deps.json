@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "Interview20241030/1.0.0": {
+        "runtime": {
+          "Interview20241030.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Interview20241030/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

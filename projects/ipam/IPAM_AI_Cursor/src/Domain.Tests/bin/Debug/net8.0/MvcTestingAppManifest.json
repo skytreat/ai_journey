@@ -1,0 +1,9 @@
+{
+  "Services.DataAccess, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Services.DataAccess",
+  "Services.Frontend, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Services.Frontend",
+  "Shared.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Shared.Application",
+  "Shared.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Shared.Contracts",
+  "Shared.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Shared.Domain",
+  "Shared.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Shared.Infrastructure",
+  "Web.WebPortal, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "D:\\workspace\\vscode\\IPAM_AI_Cursor\\src\\Web.WebPortal"
+}
