@@ -6,10 +6,10 @@ namespace Ipam.DataAccess
 {
     public interface IDataAccessService
     {
-        Task<IPAddress> CreateIPAddressAsync(IPAddress ipAddress);
-        Task<IPAddress> GetIPAddressAsync(string addressSpaceId, string ipId);
-        Task<IEnumerable<IPAddress>> GetIPAddressesAsync(string addressSpaceId, string cidr = null, Dictionary<string, string> tags = null);
-        Task<IPAddress> UpdateIPAddressAsync(IPAddress ipAddress);
+        Task<IpAllocation> CreateIPAddressAsync(IpAllocation ipAllocation);
+        Task<IpAllocation> GetIPAddressAsync(string addressSpaceId, string ipId);
+        Task<IEnumerable<IpAllocation>> GetIPAddressesAsync(string addressSpaceId, string cidr = null, Dictionary<string, string> tags = null);
+        Task<IpAllocation> UpdateIPAddressAsync(IpAllocation ipAllocation);
         Task DeleteIPAddressAsync(string addressSpaceId, string ipId);
         Task<AddressSpace> CreateAddressSpaceAsync(AddressSpace addressSpace);
         Task<AddressSpace> GetAddressSpaceAsync(string addressSpaceId);

@@ -237,8 +237,8 @@ namespace IpamPowershellCLI
             command.Handler = CommandHandler.Create<string, string>(async (addressSpaceId, prefix) =>
             {
                 var client = new IpamApiClient("http://localhost:5000");
-                var ipAddress = new IPAddress { AddressSpaceId = addressSpaceId, Prefix = prefix };
-                var result = await client.CreateIPAddressAsync(addressSpaceId, ipAddress);
+                var ipAllocation = new IpAllocation { AddressSpaceId = addressSpaceId, Prefix = prefix };
+                var result = await client.CreateIPAddressAsync(addressSpaceId, ipAllocation);
                 Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             });
             

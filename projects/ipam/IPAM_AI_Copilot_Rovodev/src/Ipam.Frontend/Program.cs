@@ -4,35 +4,51 @@ using Microsoft.Extensions.DependencyInjection;
 using Ipam.DataAccess;
 using Ipam.DataAccess.Configuration;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add IPAM DataAccess services
-builder.Services.AddIpamDataAccess(options =>
+namespace Ipam.Frontend
 {
-    options.ConnectionString = builder.Configuration.GetConnectionString("AzureTableStorage") ?? "UseDevelopmentStorage=true";
-    options.EnableCaching = true;
-    options.CacheDuration = TimeSpan.FromMinutes(5);
-});
+    /// <summary>
+    /// Frontend service entry point
+    /// </summary>
+    /// <remarks>
+    /// Author: IPAM Team
+    /// Date: 2024-01-20
+    /// </remarks>
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
 
-// Add controllers and API services
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+            // Add IPAM DataAccess services
+            builder.Services.AddIpamDataAccess(options =>
+            {
+                options.ConnectionString = builder.Configuration.GetConnectionString("AzureTableStorage") ?? "UseDevelopmentStorage=true";
+                options.EnableCaching = true;
+                options.CacheDuration = TimeSpan.FromMinutes(5);
+            });
 
-// Add AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
+            // Add controllers and API services
+            builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
+            // Add AutoMapper
+            builder.Services.AddAutoMapper(typeof(Program));
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+            var app = builder.Build();
+
+            // Configure the HTTP request pipeline
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            app.UseHttpsRedirection();
+            app.UseAuthorization();
+            app.MapControllers();
+
+            app.Run();
+        }
+    }
 }
-
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-
-app.Run();

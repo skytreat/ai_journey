@@ -37,11 +37,11 @@ namespace Ipam.Frontend.Controllers
         [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "addressSpaceId", "ipId" })]
         public async Task<IActionResult> GetById(string addressSpaceId, string ipId)
         {
-            var ipAddress = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
-            if (ipAddress == null)
+            var ipAllocation = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            if (ipAllocation == null)
                 return NotFound();
 
-            return Ok(ipAddress);
+            return Ok(ipAllocation);
         }
 
         /// <summary>
@@ -51,8 +51,8 @@ namespace Ipam.Frontend.Controllers
         [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "addressSpaceId", "cidr", "tags" })]
         public async Task<IActionResult> GetAll(string addressSpaceId, [FromQuery] string cidr = null, [FromQuery] Dictionary<string, string> tags = null)
         {
-            var ipAddresses = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, cidr, tags);
-            return Ok(ipAddresses);
+            var ipAllocations = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, cidr, tags);
+            return Ok(ipAllocations);
         }
 
         /// <summary>
@@ -69,17 +69,17 @@ namespace Ipam.Frontend.Controllers
             if (model.AddressSpaceId != addressSpaceId)
                 return BadRequest("Address space ID mismatch between route and model.");
 
-            var ipAddress = new IPAddress
+            var ipAllocation = new IpAllocation
             {
                 Id = Guid.NewGuid().ToString(),
                 AddressSpaceId = addressSpaceId,
                 Prefix = model.Prefix,
-                Tags = model.Tags?.Select(t => new IPAddressTag { Name = t.Key, Value = t.Value }).ToList() ?? new List<IPAddressTag>(),
+                Tags = model.Tags?.Select(t => new IpAllocationTag { Name = t.Key, Value = t.Value }).ToList() ?? new List<IpAllocationTag>(),
                 CreatedOn = DateTime.UtcNow,
                 ModifiedOn = DateTime.UtcNow
             };
 
-            var result = await _dataAccessService.CreateIPAddressAsync(ipAddress);
+            var result = await _dataAccessService.CreateIPAddressAsync(ipAllocation);
             return CreatedAtAction(nameof(GetById), 
                 new { addressSpaceId = addressSpaceId, ipId = result.Id }, 
                 result);
@@ -95,18 +95,18 @@ namespace Ipam.Frontend.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Get existing IP address
-            var existingIpAddress = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
-            if (existingIpAddress == null)
+            // Get existing IP allocation
+            var existingIpAllocation = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            if (existingIpAllocation == null)
                 return NotFound();
 
             // Update properties
-            existingIpAddress.Prefix = model.Prefix;
-            existingIpAddress.Tags = model.Tags?.Select(t => new IPAddressTag { Name = t.Key, Value = t.Value }).ToList() ?? new List<IPAddressTag>();
-            existingIpAddress.ModifiedOn = DateTime.UtcNow;
+            existingIpAllocation.Prefix = model.Prefix;
+            existingIpAllocation.Tags = model.Tags?.Select(t => new IpAllocationTag { Name = t.Key, Value = t.Value }).ToList() ?? new List<IpAllocationTag>();
+            existingIpAllocation.ModifiedOn = DateTime.UtcNow;
 
-            var updatedIpAddress = await _dataAccessService.UpdateIPAddressAsync(existingIpAddress);
-            return Ok(updatedIpAddress);
+            var updatedIpAllocation = await _dataAccessService.UpdateIPAddressAsync(existingIpAllocation);
+            return Ok(updatedIpAllocation);
         }
 
         /// <summary>
@@ -116,8 +116,8 @@ namespace Ipam.Frontend.Controllers
         [Authorize(Roles = "SystemAdmin,AddressSpaceAdmin,AddressSpaceOperator")]
         public async Task<IActionResult> Delete(string addressSpaceId, string ipId)
         {
-            var existingIpAddress = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
-            if (existingIpAddress == null)
+            var existingIpAllocation = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            if (existingIpAllocation == null)
                 return NotFound();
 
             await _dataAccessService.DeleteIPAddressAsync(addressSpaceId, ipId);
@@ -134,8 +134,8 @@ namespace Ipam.Frontend.Controllers
             if (string.IsNullOrEmpty(prefix))
                 return BadRequest("Prefix parameter is required.");
 
-            var ipAddresses = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, prefix, null);
-            return Ok(ipAddresses);
+            var ipAllocations = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, prefix, null);
+            return Ok(ipAllocations);
         }
 
         /// <summary>
@@ -148,8 +148,8 @@ namespace Ipam.Frontend.Controllers
             if (tags == null || !tags.Any())
                 return BadRequest("At least one tag must be specified.");
 
-            var ipAddresses = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, null, tags);
-            return Ok(ipAddresses);
+            var ipAllocations = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, null, tags);
+            return Ok(ipAllocations);
         }
 
         /// <summary>

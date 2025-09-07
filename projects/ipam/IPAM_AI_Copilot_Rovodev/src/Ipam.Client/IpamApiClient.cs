@@ -64,21 +64,21 @@ namespace Ipam.Client
         }
 
         // IP Address operations
-        public async Task<IPAddress> CreateIPAddressAsync(string addressSpaceId, IPAddress ipAddress)
+        public async Task<IpAllocation> CreateIPAddressAsync(string addressSpaceId, IpAllocation ipAllocation)
         {
-            var response = await _httpClient.PostAsJsonAsync($"api/addressspaces/{addressSpaceId}/ipaddresses", ipAddress);
+            var response = await _httpClient.PostAsJsonAsync($"api/addressspaces/{addressSpaceId}/ipaddresses", ipAllocation);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<IPAddress>();
+            return await response.Content.ReadFromJsonAsync<IpAllocation>();
         }
 
-        public async Task<IPAddress> GetIPAddressAsync(string addressSpaceId, string ipId)
+        public async Task<IpAllocation> GetIPAddressAsync(string addressSpaceId, string ipId)
         {
             var response = await _httpClient.GetAsync($"api/addressspaces/{addressSpaceId}/ipaddresses/{ipId}");
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<IPAddress>();
+            return await response.Content.ReadFromJsonAsync<IpAllocation>();
         }
 
-        public async Task<IEnumerable<IPAddress>> GetIPAddressesAsync(string addressSpaceId, string cidr = null, Dictionary<string, string> tags = null)
+        public async Task<IEnumerable<IpAllocation>> GetIPAddressesAsync(string addressSpaceId, string cidr = null, Dictionary<string, string> tags = null)
         {
             var queryParams = new List<string>();
             if (!string.IsNullOrEmpty(cidr))
@@ -93,14 +93,14 @@ namespace Ipam.Client
             var query = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
             var response = await _httpClient.GetAsync($"api/addressspaces/{addressSpaceId}/ipaddresses{query}");
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<IEnumerable<IPAddress>>();
+            return await response.Content.ReadFromJsonAsync<IEnumerable<IpAllocation>>();
         }
 
-        public async Task<IPAddress> UpdateIPAddressAsync(string addressSpaceId, string ipId, IPAddress ipAddress)
+        public async Task<IpAllocation> UpdateIPAddressAsync(string addressSpaceId, string ipId, IpAllocation ipAllocation)
         {
-            var response = await _httpClient.PutAsJsonAsync($"api/addressspaces/{addressSpaceId}/ipaddresses/{ipId}", ipAddress);
+            var response = await _httpClient.PutAsJsonAsync($"api/addressspaces/{addressSpaceId}/ipaddresses/{ipId}", ipAllocation);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<IPAddress>();
+            return await response.Content.ReadFromJsonAsync<IpAllocation>();
         }
 
         public async Task DeleteIPAddressAsync(string addressSpaceId, string ipId)

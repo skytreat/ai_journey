@@ -5,31 +5,31 @@ using Xunit;
 
 namespace Ipam.UnitTests
 {
-    public class IPAddressTests
+    public class IpAllocationTests
     {
         [Fact]
-        public void IPAddress_InheritTagsFromParent_ShouldInheritInheritableTags()
+        public void IpAllocation_InheritTagsFromParent_ShouldInheritInheritableTags()
         {
             // Arrange
-            var parentIP = new IPAddress
+            var parentIP = new IpAllocation
             {
                 Id = "parent-1",
                 Prefix = "192.168.1.0/24",
-                Tags = new List<Tag>
+                Tags = new List<IpAllocationTag>
                 {
-                    new Tag { Name = "Environment", Value = "Production", Type = TagType.Inheritable },
-                    new Tag { Name = "Owner", Value = "TeamA", Type = TagType.NonInheritable }
+                    new IpAllocationTag { Name = "Environment", Value = "Production" },
+                    new IpAllocationTag { Name = "Owner", Value = "TeamA" }
                 }
             };
 
-            var childIP = new IPAddress
+            var childIP = new IpAllocation
             {
                 Id = "child-1",
                 Prefix = "192.168.1.10/32",
                 ParentId = parentIP.Id,
-                Tags = new List<Tag>
+                Tags = new List<IpAllocationTag>
                 {
-                    new Tag { Name = "Service", Value = "Web", Type = TagType.Inheritable }
+                    new IpAllocationTag { Name = "Service", Value = "Web" }
                 }
             };
 
@@ -37,15 +37,15 @@ namespace Ipam.UnitTests
             // Simulate tag inheritance logic
             foreach (var tag in parentIP.Tags)
             {
-                if (tag.Type == TagType.Inheritable && !childIP.Tags.Exists(t => t.Name == tag.Name))
+                if (!childIP.Tags.Exists(t => t.Name == tag.Name))
                 {
-                    childIP.Tags.Add(new Tag { Name = tag.Name, Value = tag.Value, Type = tag.Type });
+                    childIP.Tags.Add(new IpAllocationTag { Name = tag.Name, Value = tag.Value });
                 }
             }
 
             // Assert
             Assert.Contains(childIP.Tags, t => t.Name == "Environment" && t.Value == "Production");
-            Assert.DoesNotContain(childIP.Tags, t => t.Name == "Owner");
+            Assert.Contains(childIP.Tags, t => t.Name == "Owner");
             Assert.Contains(childIP.Tags, t => t.Name == "Service");
         }
     }

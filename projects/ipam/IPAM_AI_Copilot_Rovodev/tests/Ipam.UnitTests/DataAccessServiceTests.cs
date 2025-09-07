@@ -13,14 +13,14 @@ namespace Ipam.UnitTests
     public class DataAccessServiceTests
     {
         [Fact]
-        public async Task CreateIPAddressAsync_WithValidIPAddress_ReturnsCreatedIPAddress()
+        public async Task CreateIPAddressAsync_WithValidIpAllocation_ReturnsCreatedIpAllocation()
         {
             // Arrange
             var mockTableServiceClient = new Mock<TableServiceClient>();
             var mockTableClient = new Mock<TableClient>();
             var dataAccessService = new DataAccessService(mockTableServiceClient.Object);
             
-            var ipAddress = new IPAddress
+            var ipAllocation = new IpAllocation
             {
                 Id = "192.168.1.1",
                 Prefix = "192.168.1.0/24",
@@ -35,12 +35,12 @@ namespace Ipam.UnitTests
                 .ReturnsAsync(new Response());
 
             // Act
-            var result = await dataAccessService.CreateIPAddressAsync(ipAddress);
+            var result = await dataAccessService.CreateIPAddressAsync(ipAllocation);
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal(ipAddress.Id, result.Id);
-            Assert.Equal(ipAddress.Prefix, result.Prefix);
+            Assert.Equal(ipAllocation.Id, result.Id);
+            Assert.Equal(ipAllocation.Prefix, result.Prefix);
             mockTableServiceClient.Verify(client => client.GetTableClient("IPAddresses"), Times.Once);
             mockTableClient.Verify(client => client.AddEntityAsync(It.IsAny<TableEntity>()), Times.Once);
         }

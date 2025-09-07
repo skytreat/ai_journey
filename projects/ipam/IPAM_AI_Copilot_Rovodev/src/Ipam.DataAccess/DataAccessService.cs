@@ -22,43 +22,43 @@ namespace Ipam.DataAccess
         }
 
         // IP Address management implementation
-        public async Task<IPAddress> CreateIPAddressAsync(IPAddress ipAddress)
+        public async Task<IpAllocation> CreateIPAddressAsync(IpAllocation ipAllocation)
         {
-            // Convert IPAddress to IpNode for storage
+            // Convert IpAllocation to IpNode for storage
             var ipNode = new IpNode
             {
-                PartitionKey = ipAddress.AddressSpaceId,
-                RowKey = ipAddress.Id,
-                Prefix = ipAddress.Prefix,
-                ParentId = ipAddress.ParentId,
-                Tags = ipAddress.Tags.ToDictionary(t => t.Name, t => t.Value),
+                PartitionKey = ipAllocation.AddressSpaceId,
+                RowKey = ipAllocation.Id,
+                Prefix = ipAllocation.Prefix,
+                ParentId = ipAllocation.ParentId,
+                Tags = ipAllocation.Tags.ToDictionary(t => t.Name, t => t.Value),
                 CreatedOn = DateTime.UtcNow,
                 ModifiedOn = DateTime.UtcNow
             };
 
             await _unitOfWork.IpNodes.CreateAsync(ipNode);
             await _unitOfWork.SaveChangesAsync();
-            return ipAddress;
+            return ipAllocation;
         }
 
-        public async Task<IPAddress> GetIPAddressAsync(string addressSpaceId, string ipId)
+        public async Task<IpAllocation> GetIPAddressAsync(string addressSpaceId, string ipId)
         {
             var ipNode = await _unitOfWork.IpNodes.GetByIdAsync(addressSpaceId, ipId);
             if (ipNode == null) return null;
 
-            return new IPAddress
+            return new IpAllocation
             {
                 Id = ipNode.RowKey,
                 AddressSpaceId = ipNode.PartitionKey,
                 Prefix = ipNode.Prefix,
                 ParentId = ipNode.ParentId,
-                Tags = ipNode.Tags.Select(t => new IPAddressTag { Name = t.Key, Value = t.Value }).ToList(),
+                Tags = ipNode.Tags.Select(t => new IpAllocationTag { Name = t.Key, Value = t.Value }).ToList(),
                 CreatedOn = ipNode.CreatedOn,
                 ModifiedOn = ipNode.ModifiedOn
             };
         }
 
-        public async Task<IEnumerable<IPAddress>> GetIPAddressesAsync(string addressSpaceId, string cidr = null, Dictionary<string, string> tags = null)
+        public async Task<IEnumerable<IpAllocation>> GetIPAddressesAsync(string addressSpaceId, string cidr = null, Dictionary<string, string> tags = null)
         {
             IEnumerable<IpNode> ipNodes;
 
@@ -76,31 +76,31 @@ namespace Ipam.DataAccess
                 ipNodes = await _unitOfWork.IpNodes.GetChildrenAsync(addressSpaceId, null);
             }
 
-            return ipNodes.Select(node => new IPAddress
+            return ipNodes.Select(node => new IpAllocation
             {
                 Id = node.RowKey,
                 AddressSpaceId = node.PartitionKey,
                 Prefix = node.Prefix,
                 ParentId = node.ParentId,
-                Tags = node.Tags.Select(t => new IPAddressTag { Name = t.Key, Value = t.Value }).ToList(),
+                Tags = node.Tags.Select(t => new IpAllocationTag { Name = t.Key, Value = t.Value }).ToList(),
                 CreatedOn = node.CreatedOn,
                 ModifiedOn = node.ModifiedOn
             });
         }
 
-        public async Task<IPAddress> UpdateIPAddressAsync(IPAddress ipAddress)
+        public async Task<IpAllocation> UpdateIPAddressAsync(IpAllocation ipAllocation)
         {
-            var ipNode = await _unitOfWork.IpNodes.GetByIdAsync(ipAddress.AddressSpaceId, ipAddress.Id);
+            var ipNode = await _unitOfWork.IpNodes.GetByIdAsync(ipAllocation.AddressSpaceId, ipAllocation.Id);
             if (ipNode == null) return null;
 
-            ipNode.Prefix = ipAddress.Prefix;
-            ipNode.ParentId = ipAddress.ParentId;
-            ipNode.Tags = ipAddress.Tags.ToDictionary(t => t.Name, t => t.Value);
+            ipNode.Prefix = ipAllocation.Prefix;
+            ipNode.ParentId = ipAllocation.ParentId;
+            ipNode.Tags = ipAllocation.Tags.ToDictionary(t => t.Name, t => t.Value);
             ipNode.ModifiedOn = DateTime.UtcNow;
 
             await _unitOfWork.IpNodes.UpdateAsync(ipNode);
             await _unitOfWork.SaveChangesAsync();
-            return ipAddress;
+            return ipAllocation;
         }
 
         public async Task DeleteIPAddressAsync(string addressSpaceId, string ipId)

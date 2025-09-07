@@ -7,13 +7,13 @@ using System.Collections.Generic;
 namespace Ipam.DataAccess.Models
 {
     /// <summary>
-    /// Represents an IP address entity in the IPAM system
+    /// Represents an IP allocation entity in the IPAM system
     /// </summary>
     /// <remarks>
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class IPAddress : ITableEntity, IEntity
+    public class IpAllocation : ITableEntity, IEntity
     {
         /// <summary>
         /// Gets or sets the partition key of the entity
@@ -56,9 +56,9 @@ namespace Ipam.DataAccess.Models
         public string ParentId { get; set; }
 
         /// <summary>
-        /// Gets or sets the tags associated with this IP address
+        /// Gets or sets the tags associated with this IP allocation
         /// </summary>
-        public List<IPAddressTag> Tags { get; set; } = new List<IPAddressTag>();
+        public List<IpAllocationTag> Tags { get; set; } = new List<IpAllocationTag>();
 
         /// <summary>
         /// Gets or sets the creation date of the IP address
@@ -82,9 +82,9 @@ namespace Ipam.DataAccess.Models
     }
 
     /// <summary>
-    /// Represents a tag associated with an IP address
+    /// Represents a tag associated with an IP allocation
     /// </summary>
-    public class IPAddressTag
+    public class IpAllocationTag
     {
         public string Name { get; set; }
         public string Value { get; set; }
