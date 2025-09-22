@@ -284,7 +284,7 @@ namespace Ipam.DataAccess.Services
             }
         }
 
-        private SemaphoreSlim GetAddressSpaceLock(string addressSpaceId)
+        public SemaphoreSlim GetAddressSpaceLock(string addressSpaceId)
         {
             lock (_lockDictionary)
             {
@@ -355,6 +355,191 @@ namespace Ipam.DataAccess.Services
             {
                 addressSpaceLock.Release();
             }
+        }
+
+        /// <summary>
+        /// Concurrent-safe update of IP allocation with optimistic concurrency control
+        /// </summary>
+        public async Task<IpAllocationEntity> UpdateIpAllocationAsync(
+            IpAllocation ipAllocation, 
+            CancellationToken cancellationToken = default)
+        {
+            var addressSpaceLock = GetAddressSpaceLock(ipAllocation.AddressSpaceId);
+            
+            await addressSpaceLock.WaitAsync(cancellationToken);
+            try
+            {
+                return await UpdateIpAllocationWithLockAsync(ipAllocation, cancellationToken);
+            }
+            finally
+            {
+                addressSpaceLock.Release();
+            }
+        }
+
+        private async Task<IpAllocationEntity> UpdateIpAllocationWithLockAsync(
+            IpAllocation ipAllocation,
+            CancellationToken cancellationToken)
+        {
+            const int maxRetries = 3;
+            var retryCount = 0;
+
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    // Get current entity with latest ETag
+                    var entity = await _ipAllocationRepository.GetByIdAsync(
+                        ipAllocation.AddressSpaceId, ipAllocation.Id);
+                    
+                    if (entity == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"IP allocation {ipAllocation.Id} not found in address space {ipAllocation.AddressSpaceId}");
+                    }
+
+                    // Check if prefix is changing - this requires additional validation
+                    var prefixChanged = entity.Prefix != ipAllocation.Prefix;
+                    
+                    if (prefixChanged)
+                    {
+                        // Validate new prefix doesn't conflict with existing allocations
+                        await ValidateNoPrefixConflictsAsync(ipAllocation.AddressSpaceId, ipAllocation.Prefix, ipAllocation.Id);
+                        
+                        // Re-evaluate parent relationship if prefix changes
+                        var newParent = await FindClosestParentWithVersionCheckAsync(ipAllocation.AddressSpaceId, ipAllocation.Prefix);
+                        
+                        // If parent changes, validate tag inheritance
+                        if (newParent?.Id != entity.ParentId)
+                        {
+                            if (newParent != null)
+                            {
+                                await _tagInheritanceService.ValidateTagInheritance(
+                                    ipAllocation.AddressSpaceId, newParent.Tags, ipAllocation.Tags);
+                            }
+                            
+                            // Update parent relationships
+                            await UpdateParentRelationshipsAsync(entity, newParent?.Id, cancellationToken);
+                        }
+                    }
+                    
+                    // Validate tag changes
+                    if (!TagsEqual(entity.Tags, ipAllocation.Tags))
+                    {
+                        // Apply tag implications for new tags
+                        var effectiveTags = await _tagInheritanceService.ApplyTagImplications(
+                            ipAllocation.AddressSpaceId, ipAllocation.Tags);
+                        
+                        // Validate inheritance rules if parent exists
+                        if (!string.IsNullOrEmpty(entity.ParentId))
+                        {
+                            var parent = await _ipAllocationRepository.GetByIdAsync(
+                                ipAllocation.AddressSpaceId, entity.ParentId);
+                            if (parent != null)
+                            {
+                                await _tagInheritanceService.ValidateTagInheritance(
+                                    ipAllocation.AddressSpaceId, parent.Tags, effectiveTags);
+                            }
+                        }
+                        
+                        ipAllocation.Tags = effectiveTags;
+                    }
+
+                    // Update entity properties while preserving entity metadata
+                    entity.Prefix = ipAllocation.Prefix;
+                    entity.Tags = ipAllocation.Tags;
+                    entity.ModifiedOn = DateTime.UtcNow;
+                    // Note: ParentId updated above if prefix changed
+
+                    // Attempt update with optimistic concurrency
+                    var updatedEntity = await _ipAllocationRepository.UpdateAsync(entity);
+                    
+                    return updatedEntity;
+                }
+                catch (RequestFailedException ex) when (ex.Status == 412) // ETag mismatch
+                {
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                        throw new ConcurrencyException("Failed to update IP allocation due to concurrent modifications", ex);
+
+                    // Exponential backoff
+                    var delay = TimeSpan.FromMilliseconds(100 * Math.Pow(2, retryCount));
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (ConcurrencyException)
+                {
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                        throw;
+
+                    var delay = TimeSpan.FromMilliseconds(100 * Math.Pow(2, retryCount));
+                    await Task.Delay(delay, cancellationToken);
+                }
+            }
+
+            throw new ConcurrencyException("Maximum retry attempts exceeded for IP allocation update");
+        }
+
+        private async Task ValidateNoPrefixConflictsAsync(string addressSpaceId, string newPrefix, string excludeId)
+        {
+            var newPrefixObj = new Prefix(newPrefix);
+            var allNodes = await _ipAllocationRepository.GetAllAsync(addressSpaceId);
+            
+            foreach (var node in allNodes.Where(n => n.Id != excludeId))
+            {
+                try
+                {
+                    var existingPrefix = new Prefix(node.Prefix);
+                    
+                    // Check for overlapping prefixes
+                    if (existingPrefix.Contains(newPrefixObj) || 
+                        newPrefixObj.Contains(existingPrefix) || 
+                        existingPrefix.Equals(newPrefixObj))
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefix {newPrefix} conflicts with existing allocation {node.Prefix} (ID: {node.Id})");
+                    }
+                }
+                catch (Exception ex) when (!(ex is InvalidOperationException))
+                {
+                    // Skip invalid prefixes
+                    continue;
+                }
+            }
+        }
+
+        private async Task UpdateParentRelationshipsAsync(
+            IpAllocationEntity entity, 
+            string newParentId, 
+            CancellationToken cancellationToken)
+        {
+            // Remove from old parent's children list
+            if (!string.IsNullOrEmpty(entity.ParentId) && entity.ParentId != newParentId)
+            {
+                await RemoveChildFromParentAsync(entity.AddressSpaceId, entity.ParentId, entity.Id, cancellationToken);
+            }
+            
+            // Add to new parent's children list
+            if (!string.IsNullOrEmpty(newParentId) && entity.ParentId != newParentId)
+            {
+                var newParent = await _ipAllocationRepository.GetByIdAsync(entity.AddressSpaceId, newParentId);
+                if (newParent != null)
+                {
+                    await UpdateParentChildrenListAsync(newParent, entity.Id, cancellationToken);
+                }
+            }
+            
+            // Update entity's parent reference
+            entity.ParentId = newParentId;
+        }
+
+        private static bool TagsEqual(Dictionary<string, string> tags1, Dictionary<string, string> tags2)
+        {
+            if (tags1 == null && tags2 == null) return true;
+            if (tags1 == null || tags2 == null) return false;
+            if (tags1.Count != tags2.Count) return false;
+            
+            return tags1.All(kvp => tags2.TryGetValue(kvp.Key, out var value) && value == kvp.Value);
         }
 
         private async Task RemoveChildFromParentAsync(string addressSpaceId, string parentId, string childId, CancellationToken cancellationToken)

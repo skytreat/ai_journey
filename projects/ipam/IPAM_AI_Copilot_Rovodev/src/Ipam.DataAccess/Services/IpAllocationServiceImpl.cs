@@ -164,20 +164,13 @@ namespace Ipam.DataAccess.Services
                 _logger.LogInformation("Updating IP allocation {IpId} in address space {AddressSpaceId}",
                     ipAllocation.Id, ipAllocation.AddressSpaceId);
 
-                var entity = await _ipAllocationRepository.GetByIdAsync(ipAllocation.AddressSpaceId, ipAllocation.Id);
-                if (entity == null)
-                {
-                    _logger.LogWarning("IP allocation {IpId} not found for update in address space {AddressSpaceId}",
-                        ipAllocation.Id, ipAllocation.AddressSpaceId);
-                    return null;
-                }
+                // Use concurrent tree service for thread-safe updates with business logic validation
+                var entity = await _concurrentIpTreeService.UpdateIpAllocationAsync(
+                    ipAllocation,
+                    cancellationToken);
 
-                // Map updated values while preserving entity metadata
-                _mapper.Map(ipAllocation, entity);
-                entity.ModifiedOn = DateTime.UtcNow;
-
-                var updatedEntity = await _ipAllocationRepository.UpdateAsync(entity);
-                var result = _mapper.Map<IpAllocation>(updatedEntity);
+                var result = _mapper.Map<IpAllocation>(entity);
+                result.Id = ipAllocation.Id; // Preserve the original ID
 
                 _logger.LogInformation("Successfully updated IP allocation {IpId}", ipAllocation.Id);
                 return result;
@@ -237,39 +230,60 @@ namespace Ipam.DataAccess.Services
                 "FindAvailableSubnets",
                 async () =>
                 {
-                    var parentPrefix = new Prefix(parentCidr);
-                    var availableSubnets = new List<string>();
-
-                    // Get all existing IP nodes in the address space
-                    var existingNodes = await _ipAllocationRepository.GetChildrenAsync(addressSpaceId, null);
-                    var existingPrefixes = existingNodes
-                        .Select(n => new Prefix(n.Prefix))
-                        .Where(p => p.IsSubnetOf(parentPrefix))
-                        .OrderBy(p => p)
-                        .ToList();
-
-                    // Generate all possible subnets of the desired size
-                    var possibleSubnets = GenerateSubnets(parentPrefix, subnetSize);
-
-                    foreach (var subnet in possibleSubnets)
+                    // Use concurrent tree service to get consistent snapshot of allocations
+                    var addressSpaceLock = _concurrentIpTreeService.GetAddressSpaceLock(addressSpaceId);
+                    await addressSpaceLock.WaitAsync(cancellationToken);
+                    
+                    try
                     {
-                        if (availableSubnets.Count >= count) break;
+                        var parentPrefix = new Prefix(parentCidr);
+                        var availableSubnets = new List<string>();
 
-                        // Check if this subnet conflicts with any existing networks
-                        bool isAvailable = !existingPrefixes.Any(existing => 
-                            existing.Contains(subnet) || subnet.Contains(existing) || existing.Equals(subnet));
+                        // Get all existing IP nodes in the address space with consistent read
+                        var existingNodes = await _ipAllocationRepository.GetAllAsync(addressSpaceId);
+                        var existingPrefixes = existingNodes
+                            .Select(n => 
+                            {
+                                try 
+                                { 
+                                    return new Prefix(n.Prefix); 
+                                } 
+                                catch 
+                                { 
+                                    return null; 
+                                }
+                            })
+                            .Where(p => p != null && p.IsSubnetOf(parentPrefix))
+                            .OrderBy(p => p)
+                            .ToList();
 
-                        if (isAvailable)
+                        // Generate all possible subnets of the desired size
+                        var possibleSubnets = GenerateSubnets(parentPrefix, subnetSize);
+
+                        foreach (var subnet in possibleSubnets)
                         {
-                            availableSubnets.Add(subnet.ToString());
+                            if (availableSubnets.Count >= count) break;
+
+                            // Check if this subnet conflicts with any existing networks
+                            bool isAvailable = !existingPrefixes.Any(existing => 
+                                existing.Contains(subnet) || subnet.Contains(existing) || existing.Equals(subnet));
+
+                            if (isAvailable)
+                            {
+                                availableSubnets.Add(subnet.ToString());
+                            }
                         }
+
+                        _logger.LogInformation(
+                            "Found {AvailableCount} available subnets out of {RequestedCount} in {ParentCidr}",
+                            availableSubnets.Count, count, parentCidr);
+
+                        return availableSubnets;
                     }
-
-                    _logger.LogInformation(
-                        "Found {AvailableCount} available subnets out of {RequestedCount} in {ParentCidr}",
-                        availableSubnets.Count, count, parentCidr);
-
-                    return availableSubnets;
+                    finally
+                    {
+                        addressSpaceLock.Release();
+                    }
                 },
                 new Dictionary<string, object>
                 {

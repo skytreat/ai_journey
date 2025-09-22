@@ -64,24 +64,71 @@ namespace Ipam.DataAccess.Repositories.Decorators
         public async Task<IpAllocationEntity> CreateAsync(IpAllocationEntity ipNode)
         {
             var result = await _repository.CreateAsync(ipNode);
-            // Invalidate related cache entries
-            _memoryCache.Remove($"ipnode:{ipNode.PartitionKey}:{ipNode.RowKey}");
+            
+            // Thread-safe cache invalidation for creation
+            InvalidateCacheForNode(result);
+            
             return result;
         }
 
         public async Task<IpAllocationEntity> UpdateAsync(IpAllocationEntity ipNode)
         {
             var result = await _repository.UpdateAsync(ipNode);
-            // Invalidate related cache entries
-            _memoryCache.Remove($"ipnode:{ipNode.PartitionKey}:{ipNode.RowKey}");
+            
+            // Thread-safe cache invalidation
+            InvalidateCacheForNode(ipNode);
+            
             return result;
+        }
+
+        private readonly object _cacheInvalidationLock = new object();
+
+        private void InvalidateCacheForNode(IpAllocationEntity ipNode)
+        {
+            lock (_cacheInvalidationLock)
+            {
+                // Invalidate specific node cache
+                _memoryCache.Remove($"ipnode:{ipNode.PartitionKey}:{ipNode.RowKey}");
+                
+                // Invalidate related cache entries that might be affected
+                _memoryCache.Remove($"ipnode:all:{ipNode.PartitionKey}");
+                _memoryCache.Remove($"ipnode:prefix:{ipNode.PartitionKey}:{ipNode.Prefix}");
+                
+                // Invalidate parent and children caches
+                if (!string.IsNullOrEmpty(ipNode.ParentId))
+                {
+                    _memoryCache.Remove($"ipnode:children:{ipNode.PartitionKey}:{ipNode.ParentId}");
+                }
+                
+                // Invalidate this node's children cache
+                _memoryCache.Remove($"ipnode:children:{ipNode.PartitionKey}:{ipNode.RowKey}");
+                
+                // Invalidate tag-based caches (simplified - in production, might need more sophisticated invalidation)
+                foreach (var tag in ipNode.Tags)
+                {
+                    var tagKey = $"{tag.Key}={tag.Value}";
+                    _memoryCache.Remove($"ipnode:tags:{ipNode.PartitionKey}:{tagKey}");
+                }
+            }
         }
 
         public async Task DeleteAsync(string addressSpaceId, string ipId)
         {
             await _repository.DeleteAsync(addressSpaceId, ipId);
-            // Invalidate related cache entries
-            _memoryCache.Remove($"ipnode:{addressSpaceId}:{ipId}");
+            
+            // Thread-safe cache invalidation for deletion
+            lock (_cacheInvalidationLock)
+            {
+                // Invalidate specific node cache
+                _memoryCache.Remove($"ipnode:{addressSpaceId}:{ipId}");
+                
+                // Invalidate broader cache entries
+                _memoryCache.Remove($"ipnode:all:{addressSpaceId}");
+                _memoryCache.Remove($"ipnode:children:{addressSpaceId}:{ipId}");
+                
+                // Note: We can't easily invalidate parent/prefix caches without the full entity
+                // In production, consider maintaining a cache dependency map
+            }
         }
     }
 }
