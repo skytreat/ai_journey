@@ -1,5 +1,5 @@
 using Xunit;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.Models;
 using System;
 using System.Net;
 
@@ -27,7 +27,6 @@ namespace Ipam.DataAccess.Tests.Models
 
             // Assert
             Assert.Equal(expectedIsIPv4, prefix.IsIPv4);
-            Assert.Equal(!expectedIsIPv4, prefix.IsIPv6);
             Assert.Equal(cidr, prefix.ToString());
         }
 

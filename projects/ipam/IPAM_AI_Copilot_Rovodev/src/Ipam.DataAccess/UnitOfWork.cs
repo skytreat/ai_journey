@@ -15,12 +15,12 @@ namespace Ipam.DataAccess
     public class UnitOfWork : IUnitOfWork
     {
         public IAddressSpaceRepository AddressSpaces { get; }
-        public IIpNodeRepository IpNodes { get; }
+        public IIpAllocationRepository IpNodes { get; }
         public ITagRepository Tags { get; }
 
         public UnitOfWork(
             IAddressSpaceRepository addressSpaces,
-            IIpNodeRepository ipNodes,
+            IIpAllocationRepository ipNodes,
             ITagRepository tags)
         {
             AddressSpaces = addressSpaces;

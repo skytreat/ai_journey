@@ -1,6 +1,6 @@
 using Xunit;
 using Microsoft.Extensions.Configuration;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using Ipam.DataAccess.Repositories;
 using System.Threading.Tasks;
 
@@ -18,7 +18,7 @@ namespace Ipam.DataAccess.Tests.IntegrationTests
                 .Build();
 
             var addressSpaceRepo = new AddressSpaceRepository(_configuration);
-            var ipNodeRepo = new IpNodeRepository(_configuration);
+            var ipNodeRepo = new IpAllocationRepository(_configuration);
             var tagRepo = new TagRepository(_configuration);
 
             _unitOfWork = new UnitOfWork(addressSpaceRepo, ipNodeRepo, tagRepo);
@@ -28,7 +28,7 @@ namespace Ipam.DataAccess.Tests.IntegrationTests
         public async Task CompleteScenario_ShouldSucceed()
         {
             // Create address space
-            var addressSpace = new AddressSpace
+            var addressSpace = new AddressSpaceEntity
             {
                 PartitionKey = "test",
                 RowKey = "space1",
@@ -37,7 +37,7 @@ namespace Ipam.DataAccess.Tests.IntegrationTests
             await _unitOfWork.AddressSpaces.CreateAsync(addressSpace);
 
             // Create tag
-            var tag = new Tag
+            var tag = new TagEntity
             {
                 PartitionKey = "test",
                 RowKey = "Environment",
@@ -46,7 +46,7 @@ namespace Ipam.DataAccess.Tests.IntegrationTests
             await _unitOfWork.Tags.CreateAsync(tag);
 
             // Create IP node
-            var ipNode = new IpNode
+            var ipNode = new IpAllocationEntity
             {
                 PartitionKey = "test",
                 RowKey = "ip1",

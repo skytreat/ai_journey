@@ -3,7 +3,7 @@ using System.CommandLine;
 using System.CommandLine.NamingConventionBinder;
 using System.Threading.Tasks;
 using Ipam.Client;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.DTOs;
 using Newtonsoft.Json;
 
 namespace IpamPowershellCLI

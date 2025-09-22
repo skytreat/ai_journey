@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Ipam.DataAccess.Models;
-using Ipam.DataAccess;
+using Ipam.ServiceContract.DTOs;
+using Ipam.ServiceContract.Interfaces;
 using Ipam.Frontend.Models;
 using System;
 using System.Collections.Generic;
@@ -22,11 +22,11 @@ namespace Ipam.Frontend.Controllers
     [Route("api/addressspaces")]
     public class AddressSpacesController : ControllerBase
     {
-        private readonly IDataAccessService _dataAccessService;
+        private readonly IAddressSpaceService _addressSpaceService;
 
-        public AddressSpacesController(IDataAccessService dataAccessService)
+        public AddressSpacesController(IAddressSpaceService addressSpaceService)
         {
-            _dataAccessService = dataAccessService;
+            _addressSpaceService = addressSpaceService;
         }
 
         /// <summary>
@@ -39,14 +39,23 @@ namespace Ipam.Frontend.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var addressSpace = new AddressSpace
+            if (!string.IsNullOrEmpty(model.Id))
             {
+                var existingAddressSpace = await _addressSpaceService.GetAddressSpaceByIdAsync(model.Id);
+                if (existingAddressSpace != null)
+                {
+                    return Ok(existingAddressSpace);
+                }
+            }
+
+            var newAddressSpace = new AddressSpace
+            {
+                Id = model.Id,
                 Name = model.Name,
-                Description = model.Description,
-                CreatedOn = DateTime.UtcNow
+                Description = model.Description
             };
 
-            var result = await _dataAccessService.CreateAddressSpaceAsync(addressSpace);
+            var result = await _addressSpaceService.CreateAddressSpaceAsync(newAddressSpace);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
@@ -55,9 +64,9 @@ namespace Ipam.Frontend.Controllers
         /// </summary>
         [HttpGet("{id}")]
         [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "id" })]
-        public async Task<IActionResult> GetById(string id)
+        public async Task<ActionResult<AddressSpace>> GetById(string id)
         {
-            var addressSpace = await _dataAccessService.GetAddressSpaceAsync(id);
+            var addressSpace = await _addressSpaceService.GetAddressSpaceByIdAsync(id);
             if (addressSpace == null)
             {
                 return NotFound();
@@ -70,9 +79,9 @@ namespace Ipam.Frontend.Controllers
         /// </summary>
         [HttpGet]
         [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "nameFilter", "createdAfter" })]
-        public async Task<IActionResult> GetAll([FromQuery] AddressSpaceQueryModel query)
+        public async Task<ActionResult<IEnumerable<AddressSpace>>> GetAll([FromQuery] AddressSpaceQueryModel query)
         {
-            var addressSpaces = await _dataAccessService.GetAddressSpacesAsync();
+            var addressSpaces = await _addressSpaceService.GetAddressSpacesAsync();
             
             // Apply filtering if needed
             if (!string.IsNullOrEmpty(query.NameFilter) || query.CreatedAfter.HasValue)
@@ -94,17 +103,18 @@ namespace Ipam.Frontend.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Get existing address space
-            var existingAddressSpace = await _dataAccessService.GetAddressSpaceAsync(id);
-            if (existingAddressSpace == null)
+            var addressSpaceToUpdate = new AddressSpace
+            {
+                Id = id,
+                Name = model.Name,
+                Description = model.Description
+            };
+
+            var updatedAddressSpace = await _addressSpaceService.UpdateAddressSpaceAsync(addressSpaceToUpdate);
+            if (updatedAddressSpace == null)
+            {
                 return NotFound();
-
-            // Update properties
-            existingAddressSpace.Name = model.Name;
-            existingAddressSpace.Description = model.Description;
-            existingAddressSpace.ModifiedOn = DateTime.UtcNow;
-
-            var updatedAddressSpace = await _dataAccessService.UpdateAddressSpaceAsync(existingAddressSpace);
+            }
             return Ok(updatedAddressSpace);
         }
 
@@ -115,11 +125,11 @@ namespace Ipam.Frontend.Controllers
         [Authorize(Roles = "SystemAdmin,AddressSpaceAdmin")]
         public async Task<IActionResult> Delete(string id)
         {
-            var existingAddressSpace = await _dataAccessService.GetAddressSpaceAsync(id);
+            var existingAddressSpace = await _addressSpaceService.GetAddressSpaceByIdAsync(id);
             if (existingAddressSpace == null)
                 return NotFound();
 
-            await _dataAccessService.DeleteAddressSpaceAsync(id);
+            await _addressSpaceService.DeleteAddressSpaceAsync(id);
             return NoContent();
         }
     }

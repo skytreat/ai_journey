@@ -2,6 +2,7 @@ using Xunit;
 using Ipam.DataAccess.Validation;
 using System;
 using System.Collections.Generic;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Tests.Validation
 {
@@ -85,15 +86,12 @@ namespace Ipam.DataAccess.Tests.Validation
             Assert.Throws<ArgumentException>(() => IpamValidator.ValidateTagInheritance(parentTags, childTags));
         }
 
-        [Theory]
-        [InlineData(null, null)]
-        [InlineData(null, new string[0])]
-        public void ValidateTagInheritance_NullOrEmptyTags_DoesNotThrow(
-            Dictionary<string, string> parentTags,
-            Dictionary<string, string> childTags)
+        [Fact]
+        public void ValidateTagInheritance_NullOrEmptyTags_DoesNotThrow()
         {
-            // Act & Assert
-            IpamValidator.ValidateTagInheritance(parentTags, childTags ?? new Dictionary<string, string>());
+            IpamValidator.ValidateTagInheritance(null, new Dictionary<string, string>());
+            IpamValidator.ValidateTagInheritance(new Dictionary<string, string>(), null);
+            IpamValidator.ValidateTagInheritance(null, null);
         }
 
         [Fact]
@@ -233,8 +231,8 @@ namespace Ipam.DataAccess.Tests.Validation
             // If it doesn't exist, we can test the underlying logic through Prefix class
             
             // Arrange
-            var parentPrefix = new Ipam.DataAccess.Models.Prefix(parentCidr);
-            var childPrefix = new Ipam.DataAccess.Models.Prefix(childCidr);
+            var parentPrefix = new Prefix(parentCidr);
+            var childPrefix = new Prefix(childCidr);
 
             // Act
             var isSubnet = childPrefix.IsSubnetOf(parentPrefix);

@@ -4,6 +4,7 @@ using Ipam.DataAccess.Services;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ipam.ServiceContract.Interfaces;
 
 namespace Ipam.Frontend.Controllers
 {
@@ -19,12 +20,12 @@ namespace Ipam.Frontend.Controllers
     [Route("api/addressspaces/{addressSpaceId}/utilization")]
     public class UtilizationController : ControllerBase
     {
-        private readonly IpAllocationService _allocationService;
+        private readonly IIpAllocationService _allocationService;
         private readonly PerformanceMonitoringService _performanceService;
         private readonly AuditService _auditService;
 
         public UtilizationController(
-            IpAllocationService allocationService,
+            IIpAllocationService allocationService,
             PerformanceMonitoringService performanceService,
             AuditService auditService)
         {

@@ -1,10 +1,13 @@
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.DTOs;
+using Ipam.DataAccess.Entities;
+using Ipam.ServiceContract.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Services
 {
@@ -17,13 +20,13 @@ namespace Ipam.DataAccess.Services
     /// </remarks>
     public class IpAllocationService
     {
-        private readonly IIpNodeRepository _ipNodeRepository;
+        private readonly IIpAllocationRepository _ipNodeRepository;
         private readonly IpTreeService _ipTreeService;
         private readonly PerformanceMonitoringService _performanceService;
         private readonly ILogger<IpAllocationService> _logger;
 
         public IpAllocationService(
-            IIpNodeRepository ipNodeRepository,
+            IIpAllocationRepository ipNodeRepository,
             IpTreeService ipTreeService,
             PerformanceMonitoringService performanceService,
             ILogger<IpAllocationService> logger)
@@ -154,7 +157,7 @@ namespace Ipam.DataAccess.Services
         /// <param name="subnetSize">Desired subnet prefix length</param>
         /// <param name="tags">Tags to apply to the new subnet</param>
         /// <returns>The allocated IP node</returns>
-        public async Task<IpNode> AllocateNextSubnetAsync(
+        public async Task<IpAllocationEntity> AllocateNextSubnetAsync(
             string addressSpaceId,
             string parentCidr,
             int subnetSize,
@@ -277,13 +280,13 @@ namespace Ipam.DataAccess.Services
     /// </summary>
     public class IpUtilizationStats
     {
-        public string NetworkCidr { get; set; }
+        public string NetworkCidr { get; set; } = null!;
         public long TotalAddresses { get; set; }
         public long AllocatedAddresses { get; set; }
         public long AvailableAddresses { get; set; }
         public double UtilizationPercentage { get; set; }
         public int SubnetCount { get; set; }
-        public string LargestAvailableBlock { get; set; }
+        public string LargestAvailableBlock { get; set; } = null!;
         public double FragmentationIndex { get; set; }
     }
 
@@ -293,8 +296,8 @@ namespace Ipam.DataAccess.Services
     public class SubnetValidationResult
     {
         public bool IsValid { get; set; }
-        public string ProposedCidr { get; set; }
+        public string ProposedCidr { get; set; } = null!;
         public List<string> ConflictingSubnets { get; set; } = new List<string>();
-        public string ValidationMessage { get; set; }
+        public string ValidationMessage { get; set; } = null!;
     }
 }

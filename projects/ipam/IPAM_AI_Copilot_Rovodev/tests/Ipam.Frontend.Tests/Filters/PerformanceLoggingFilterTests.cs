@@ -44,7 +44,7 @@ namespace Ipam.Frontend.Tests.Filters
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
                 "API.TestController.TestAction",
-                It.IsAny<double>(),
+                It.Is<double>(d => d >= 0),
                 true,
                 It.Is<Dictionary<string, object>>(d => 
                     d.ContainsKey("Controller") && 
@@ -67,7 +67,7 @@ namespace Ipam.Frontend.Tests.Filters
 
             _performanceServiceMock.Verify(x => x.RecordMetric(
                 "API.TestController.TestAction",
-                It.IsAny<double>(),
+                It.Is<double>(d => d >= 0),
                 false,
                 It.Is<Dictionary<string, object>>(d => 
                     d.ContainsKey("ExceptionType") && 
@@ -87,9 +87,9 @@ namespace Ipam.Frontend.Tests.Filters
 
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<bool>(),
+                It.Is<string>(s => s.StartsWith("API.")),
+                It.Is<double>(d => d >= 0),
+                It.Is<bool>(b => b),
                 It.Is<Dictionary<string, object>>(d => 
                     d.ContainsKey("UserId") && 
                     d["UserId"].ToString() == "testuser")),
@@ -108,9 +108,9 @@ namespace Ipam.Frontend.Tests.Filters
 
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<bool>(),
+                It.Is<string>(s => s.StartsWith("API.")),
+                It.Is<double>(d => d >= 0),
+                It.Is<bool>(b => b),
                 It.Is<Dictionary<string, object>>(d => 
                     d.ContainsKey("UserId") && 
                     d["UserId"].ToString() == "Anonymous")),
@@ -129,13 +129,13 @@ namespace Ipam.Frontend.Tests.Filters
 
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
-                "API.StatusCode.201",
-                It.IsAny<double>(),
-                true,
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("StatusCode") && 
-                    d["StatusCode"].ToString() == "201")),
-                Times.Once);
+                 "API.StatusCode.201",
+                 It.Is<double>(d => d >= 0),
+                 true,
+                 It.Is<Dictionary<string, object>>(d => 
+                     d.ContainsKey("StatusCode") && 
+                     d["StatusCode"].ToString() == "201")),
+                 Times.Once);
         }
 
         [Fact]
@@ -150,13 +150,13 @@ namespace Ipam.Frontend.Tests.Filters
 
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
-                "API.StatusCode.400",
-                It.IsAny<double>(),
-                false, // 4xx should be recorded as failure
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("StatusCode") && 
-                    d["StatusCode"].ToString() == "400")),
-                Times.Once);
+                 "API.StatusCode.400",
+                 It.Is<double>(d => d >= 0),
+                 false, // 4xx should be recorded as failure
+                 It.Is<Dictionary<string, object>>(d => 
+                     d.ContainsKey("StatusCode") && 
+                     d["StatusCode"].ToString() == "400")),
+                 Times.Once);
         }
 
         [Fact]
@@ -172,7 +172,7 @@ namespace Ipam.Frontend.Tests.Filters
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
                 "API.StatusCode.500",
-                It.IsAny<double>(),
+                It.Is<double>(d => d >= 0),
                 false, // 5xx should be recorded as failure
                 It.Is<Dictionary<string, object>>(d => 
                     d.ContainsKey("StatusCode") && 
@@ -197,9 +197,9 @@ namespace Ipam.Frontend.Tests.Filters
 
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<bool>(),
+                It.Is<string>(s => s.StartsWith("API.")),
+                It.Is<double>(d => d >= 0),
+                It.Is<bool>(b => b),
                 It.Is<Dictionary<string, object>>(d => 
                     d.ContainsKey("HttpMethod") && 
                     d["HttpMethod"].ToString() == httpMethod)),
@@ -219,10 +219,10 @@ namespace Ipam.Frontend.Tests.Filters
 
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.IsAny<string>(),
+                It.Is<string>(s => s.StartsWith("API.")),
                 It.Is<double>(d => d >= delay.TotalMilliseconds),
-                It.IsAny<bool>(),
-                It.IsAny<Dictionary<string, object>>()),
+                It.Is<bool>(b => b),
+                It.Is<Dictionary<string, object>>(d => d != null)),
                 Times.AtLeastOnce);
         }
 
@@ -239,17 +239,17 @@ namespace Ipam.Frontend.Tests.Filters
             // Assert
             _performanceServiceMock.Verify(x => x.RecordMetric(
                 "API.TestController.TestAction",
-                It.IsAny<double>(),
+                It.Is<double>(d => d >= 0),
                 true,
-                It.IsAny<Dictionary<string, object>>()),
+                It.Is<Dictionary<string, object>>(d => d != null)),
                 Times.Once);
 
             // Should not record status code metric when no result
             _performanceServiceMock.Verify(x => x.RecordMetric(
                 It.Is<string>(s => s.StartsWith("API.StatusCode.")),
-                It.IsAny<double>(),
-                It.IsAny<bool>(),
-                It.IsAny<Dictionary<string, object>>()),
+                It.Is<double>(d => d >= 0),
+                It.Is<bool>(b => b),
+                It.Is<Dictionary<string, object>>(d => d != null)),
                 Times.Never);
         }
 

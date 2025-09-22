@@ -2,8 +2,8 @@ using Xunit;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Ipam.DataAccess;
 using Ipam.DataAccess.Services;
+using Ipam.ServiceContract.Interfaces;
 using Ipam.Frontend.Controllers;
 using System;
 using System.Collections.Generic;
@@ -21,19 +21,19 @@ namespace Ipam.Frontend.Tests.Controllers
     /// </remarks>
     public class HealthControllerTests
     {
-        private readonly Mock<IDataAccessService> _dataServiceMock;
+        private readonly Mock<IAddressSpaceService> _addressSpaceServiceMock;
         private readonly Mock<PerformanceMonitoringService> _performanceServiceMock;
         private readonly Mock<ILogger<HealthController>> _loggerMock;
         private readonly HealthController _controller;
 
         public HealthControllerTests()
         {
-            _dataServiceMock = new Mock<IDataAccessService>();
+            _addressSpaceServiceMock = new Mock<IAddressSpaceService>();
             _performanceServiceMock = new Mock<PerformanceMonitoringService>();
             _loggerMock = new Mock<ILogger<HealthController>>();
             
             _controller = new HealthController(
-                _dataServiceMock.Object,
+                _addressSpaceServiceMock.Object,
                 _performanceServiceMock.Object,
                 _loggerMock.Object);
         }
@@ -59,8 +59,8 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_AllServicesHealthy_ReturnsOkWithHealthyStatus()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.DataAccess.Models.AddressSpace>());
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>());
 
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
                 .Returns(new Dictionary<string, PerformanceStatistics>
@@ -84,7 +84,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_DatabaseUnhealthy_ReturnsDegradedStatus()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
                 .ThrowsAsync(new Exception("Database connection failed"));
 
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
@@ -106,8 +106,8 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_PerformanceDegraded_ReturnsDegradedStatus()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.DataAccess.Models.AddressSpace>());
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>());
 
             // Setup performance metrics with high response times
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
@@ -128,7 +128,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_ExceptionThrown_ReturnsInternalServerError()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
                 .ThrowsAsync(new Exception("Unexpected error"));
 
             // Act
@@ -183,10 +183,10 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetReadiness_DatabaseAccessible_ReturnsOkWithReadyStatus()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.DataAccess.Models.AddressSpace>
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>
                 {
-                    new Ipam.DataAccess.Models.AddressSpace { Id = "test" }
+                    new Ipam.ServiceContract.DTOs.AddressSpaceDto { Id = "test" }
                 });
 
             // Act
@@ -205,7 +205,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetReadiness_DatabaseInaccessible_ReturnsServiceUnavailable()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
                 .ThrowsAsync(new Exception("Database unavailable"));
 
             // Act
@@ -239,8 +239,8 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_MemoryPressureHigh_ReturnsDegradedStatus()
         {
             // Arrange
-            _dataServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.DataAccess.Models.AddressSpace>());
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>());
 
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
                 .Returns(new Dictionary<string, PerformanceStatistics>

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Ipam.ServiceContract.Interfaces;
 
 namespace Ipam.Frontend.Controllers
 {
@@ -21,16 +22,16 @@ namespace Ipam.Frontend.Controllers
     [Route("api/health")]
     public class HealthController : ControllerBase
     {
-        private readonly IDataAccessService _dataAccessService;
+        private readonly IAddressSpaceService _addressSpaceService;
         private readonly PerformanceMonitoringService _performanceService;
         private readonly ILogger<HealthController> _logger;
 
         public HealthController(
-            IDataAccessService dataAccessService,
+            IAddressSpaceService addressSpaceService,
             PerformanceMonitoringService performanceService,
             ILogger<HealthController> logger)
         {
-            _dataAccessService = dataAccessService;
+            _addressSpaceService = addressSpaceService;
             _performanceService = performanceService;
             _logger = logger;
         }
@@ -143,7 +144,7 @@ namespace Ipam.Frontend.Controllers
             try
             {
                 // Quick database connectivity check
-                var addressSpaces = await _dataAccessService.GetAddressSpacesAsync();
+                var addressSpaces = await _addressSpaceService.GetAddressSpacesAsync();
                 
                 return Ok(new
                 {
@@ -182,7 +183,7 @@ namespace Ipam.Frontend.Controllers
             try
             {
                 var startTime = DateTime.UtcNow;
-                var addressSpaces = await _dataAccessService.GetAddressSpacesAsync();
+                var addressSpaces = await _addressSpaceService.GetAddressSpacesAsync();
                 var responseTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
 
                 return new

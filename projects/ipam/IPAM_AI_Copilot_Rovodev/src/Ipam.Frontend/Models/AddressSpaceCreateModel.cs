@@ -12,6 +12,12 @@ namespace Ipam.Frontend.Models
     public class AddressSpaceCreateModel
     {
         /// <summary>
+        /// Gets or sets the ID of the address space.
+        /// If not provided, a new ID will be generated.
+        /// </summary>
+        public string Id { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the address space
         /// </summary>
         [Required]

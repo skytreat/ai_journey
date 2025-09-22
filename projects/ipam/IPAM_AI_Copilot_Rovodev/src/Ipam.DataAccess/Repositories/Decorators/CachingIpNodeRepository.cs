@@ -1,21 +1,22 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
 using Ipam.DataAccess.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ipam.DataAccess.Entities;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Repositories.Decorators
 {
-    public class CachingIpNodeRepository : CachingRepositoryDecorator<IIpNodeRepository>, IIpNodeRepository
+    public class CachingIpNodeRepository : CachingRepositoryDecorator<IIpAllocationRepository>, IIpAllocationRepository
     {
-        private readonly IIpNodeRepository _repository;
+        private readonly IIpAllocationRepository _repository;
         private readonly IMemoryCache _memoryCache;
 
         public CachingIpNodeRepository(
-            IIpNodeRepository repository,
+            IIpAllocationRepository repository,
             IMemoryCache cache,
             IOptions<DataAccessOptions> options)
             : base(repository, cache, options)
@@ -24,21 +25,28 @@ namespace Ipam.DataAccess.Repositories.Decorators
             _memoryCache = cache;
         }
 
-        public async Task<IpNode> GetByIdAsync(string addressSpaceId, string ipId)
+        public async Task<IpAllocationEntity> GetByIdAsync(string addressSpaceId, string ipId)
         {
             return await WithCache(
                 $"ipnode:{addressSpaceId}:{ipId}",
                 () => _repository.GetByIdAsync(addressSpaceId, ipId));
         }
 
-        public async Task<IEnumerable<IpNode>> GetByPrefixAsync(string addressSpaceId, string cidr)
+        public async Task<IList<IpAllocationEntity>> GetAllAsync(string addressSpaceId)
+        {
+            return await WithCache(
+                $"ipnode:all:{addressSpaceId}",
+                () => _repository.GetAllAsync(addressSpaceId));
+        }
+
+        public async Task<IEnumerable<IpAllocationEntity>> GetByPrefixAsync(string addressSpaceId, string cidr)
         {
             return await WithCache(
                 $"ipnode:prefix:{addressSpaceId}:{cidr}",
                 () => _repository.GetByPrefixAsync(addressSpaceId, cidr));
         }
 
-        public async Task<IEnumerable<IpNode>> GetByTagsAsync(string addressSpaceId, Dictionary<string, string> tags)
+        public async Task<IEnumerable<IpAllocationEntity>> GetByTagsAsync(string addressSpaceId, Dictionary<string, string> tags)
         {
             var tagKey = string.Join(",", tags.Select(t => $"{t.Key}={t.Value}"));
             return await WithCache(
@@ -46,14 +54,14 @@ namespace Ipam.DataAccess.Repositories.Decorators
                 () => _repository.GetByTagsAsync(addressSpaceId, tags));
         }
 
-        public async Task<IEnumerable<IpNode>> GetChildrenAsync(string addressSpaceId, string parentId)
+        public async Task<IEnumerable<IpAllocationEntity>> GetChildrenAsync(string addressSpaceId, string parentId)
         {
             return await WithCache(
                 $"ipnode:children:{addressSpaceId}:{parentId}",
                 () => _repository.GetChildrenAsync(addressSpaceId, parentId));
         }
 
-        public async Task<IpNode> CreateAsync(IpNode ipNode)
+        public async Task<IpAllocationEntity> CreateAsync(IpAllocationEntity ipNode)
         {
             var result = await _repository.CreateAsync(ipNode);
             // Invalidate related cache entries
@@ -61,7 +69,7 @@ namespace Ipam.DataAccess.Repositories.Decorators
             return result;
         }
 
-        public async Task<IpNode> UpdateAsync(IpNode ipNode)
+        public async Task<IpAllocationEntity> UpdateAsync(IpAllocationEntity ipNode)
         {
             var result = await _repository.UpdateAsync(ipNode);
             // Invalidate related cache entries

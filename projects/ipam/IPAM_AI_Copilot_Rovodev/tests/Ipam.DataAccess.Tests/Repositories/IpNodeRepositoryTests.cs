@@ -2,7 +2,7 @@ using Xunit;
 using Moq;
 using Microsoft.Extensions.Configuration;
 using Ipam.DataAccess.Repositories;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -12,22 +12,22 @@ namespace Ipam.DataAccess.Tests.Repositories
     public class IpNodeRepositoryTests
     {
         private readonly Mock<IConfiguration> _configMock;
-        private readonly IpNodeRepository _repository;
+        private readonly IpAllocationRepository _repository;
 
         public IpNodeRepositoryTests()
         {
             _configMock = new Mock<IConfiguration>();
-            _configMock.Setup(x => x.GetConnectionString("AzureTableStorage"))
-                .Returns("UseDevelopmentStorage=true");
+            _configMock.Setup(c => c["ConnectionStrings:AzureTableStorage"])
+                       .Returns("UseDevelopmentStorage=true");
             
-            _repository = new IpNodeRepository(_configMock.Object);
+            _repository = new IpAllocationRepository(_configMock.Object);
         }
 
         [Fact]
         public async Task CreateAsync_ValidIpNode_ShouldSucceed()
         {
             // Arrange
-            var ipNode = new IpNode
+            var ipNode = new IpAllocationEntity
             {
                 PartitionKey = "space1",
                 RowKey = "ip1",
@@ -53,7 +53,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CreateAsync_InvalidCidr_ShouldThrowValidationException(string cidr)
         {
             // Arrange
-            var ipNode = new IpNode { Prefix = cidr };
+            var ipNode = new IpAllocationEntity { Prefix = cidr };
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.CreateAsync(ipNode));

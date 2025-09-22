@@ -1,5 +1,7 @@
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.DTOs;
+using Ipam.DataAccess.Entities;
+using Ipam.ServiceContract.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,11 +18,11 @@ namespace Ipam.DataAccess.Services
     /// </remarks>
     public class OptimizedIpTreeTraversalService
     {
-        private readonly IIpNodeRepository _repository;
+        private readonly IIpAllocationRepository _repository;
         private readonly Dictionary<string, IpTreeIndex> _treeIndexCache;
         private readonly object _cacheLock = new object();
 
-        public OptimizedIpTreeTraversalService(IIpNodeRepository repository)
+        public OptimizedIpTreeTraversalService(IIpAllocationRepository repository)
         {
             _repository = repository;
             _treeIndexCache = new Dictionary<string, IpTreeIndex>();
@@ -33,7 +35,7 @@ namespace Ipam.DataAccess.Services
         /// <param name="addressSpaceId">Address space identifier</param>
         /// <param name="targetCidr">Target CIDR to find parent for</param>
         /// <returns>Closest parent node or null</returns>
-        public async Task<IpNode> FindClosestParentOptimizedAsync(string addressSpaceId, string targetCidr)
+        public async Task<IpAllocationEntity> FindClosestParentOptimizedAsync(string addressSpaceId, string targetCidr)
         {
             var targetPrefix = new Prefix(targetCidr);
             var treeIndex = await GetOrBuildTreeIndexAsync(addressSpaceId);
@@ -45,9 +47,9 @@ namespace Ipam.DataAccess.Services
         /// DFS traversal to find the closest parent
         /// Traverses only relevant branches of the tree
         /// </summary>
-        private IpNode FindParentUsingDFS(List<IpTreeNode> nodes, Prefix targetPrefix)
+        private IpAllocationEntity FindParentUsingDFS(List<IpTreeNode> nodes, Prefix targetPrefix)
         {
-            IpNode closestParent = null;
+            IpAllocationEntity closestParent = null;
             int maxMatchingLength = -1;
 
             foreach (var treeNode in nodes)
@@ -108,7 +110,7 @@ namespace Ipam.DataAccess.Services
         /// Alternative implementation using iterative DFS with stack
         /// More memory efficient for very deep trees
         /// </summary>
-        public async Task<IpNode> FindClosestParentIterativeAsync(string addressSpaceId, string targetCidr)
+        public async Task<IpAllocationEntity> FindClosestParentIterativeAsync(string addressSpaceId, string targetCidr)
         {
             var targetPrefix = new Prefix(targetCidr);
             var treeIndex = await GetOrBuildTreeIndexAsync(addressSpaceId);
@@ -119,7 +121,7 @@ namespace Ipam.DataAccess.Services
                 stack.Push(root);
             }
 
-            IpNode closestParent = null;
+            IpAllocationEntity closestParent = null;
             int maxMatchingLength = -1;
 
             while (stack.Count > 0)
@@ -205,7 +207,7 @@ namespace Ipam.DataAccess.Services
         /// <summary>
         /// Builds hierarchical tree index from flat list of nodes
         /// </summary>
-        private IpTreeIndex BuildTreeIndex(List<IpNode> allNodes)
+        private IpTreeIndex BuildTreeIndex(List<IpAllocationEntity> allNodes)
         {
             var nodeMap = new Dictionary<string, IpTreeNode>();
             var rootNodes = new List<IpTreeNode>();
@@ -270,7 +272,7 @@ namespace Ipam.DataAccess.Services
         /// Optimized parent finding using prefix-based binary search approach
         /// For very large trees with well-structured CIDR allocations
         /// </summary>
-        public async Task<IpNode> FindClosestParentBinarySearchAsync(string addressSpaceId, string targetCidr)
+        public async Task<IpAllocationEntity> FindClosestParentBinarySearchAsync(string addressSpaceId, string targetCidr)
         {
             var targetPrefix = new Prefix(targetCidr);
             var allNodes = await _repository.GetChildrenAsync(addressSpaceId, null);
@@ -346,9 +348,9 @@ namespace Ipam.DataAccess.Services
     /// </summary>
     public class IpTreeNode
     {
-        public IpNode Node { get; set; }
+        public IpAllocationEntity Node { get; set; } = null!;
         public List<IpTreeNode> Children { get; set; } = new List<IpTreeNode>();
-        public IpTreeNode Parent { get; set; }
+        public IpTreeNode? Parent { get; set; }
     }
 
     /// <summary>

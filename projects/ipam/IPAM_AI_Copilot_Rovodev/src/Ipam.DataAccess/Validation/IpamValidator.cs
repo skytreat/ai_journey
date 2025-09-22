@@ -1,8 +1,8 @@
-using Ipam.DataAccess.Models;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Validation
 {
@@ -15,14 +15,8 @@ namespace Ipam.DataAccess.Validation
         {
             try
             {
-                var parts = cidr.Split('/');
-                if (parts.Length != 2) throw new ArgumentException("Invalid CIDR format");
-                
-                if (!System.Net.IPAddress.TryParse(parts[0], out _))
-                    throw new ArgumentException("Invalid IP address");
-
-                if (!int.TryParse(parts[1], out int prefix) || prefix < 0 || prefix > 128)
-                    throw new ArgumentException("Invalid prefix length");
+                var prefix = new Prefix(cidr);
+                // Additional checks can be added here if needed
             }
             catch (Exception ex)
             {
@@ -32,6 +26,11 @@ namespace Ipam.DataAccess.Validation
 
         public static void ValidateTagInheritance(Dictionary<string, string> parentTags, Dictionary<string, string> childTags)
         {
+            if (parentTags == null || childTags == null)
+            {
+                return;
+            }
+
             foreach (var tag in parentTags)
             {
                 if (childTags.TryGetValue(tag.Key, out string childValue) && 

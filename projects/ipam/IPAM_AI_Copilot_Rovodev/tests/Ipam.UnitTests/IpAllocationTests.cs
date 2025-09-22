@@ -15,10 +15,10 @@ namespace Ipam.UnitTests
             {
                 Id = "parent-1",
                 Prefix = "192.168.1.0/24",
-                Tags = new List<IpAllocationTag>
+                Tags = new Dictionary<string, string>
                 {
-                    new IpAllocationTag { Name = "Environment", Value = "Production" },
-                    new IpAllocationTag { Name = "Owner", Value = "TeamA" }
+                    { "Environment", "Production" },
+                    { "Owner", "TeamA" }
                 }
             };
 
@@ -27,9 +27,9 @@ namespace Ipam.UnitTests
                 Id = "child-1",
                 Prefix = "192.168.1.10/32",
                 ParentId = parentIP.Id,
-                Tags = new List<IpAllocationTag>
+                Tags = new Dictionary<string, string>
                 {
-                    new IpAllocationTag { Name = "Service", Value = "Web" }
+                    { "Service", "Web" }
                 }
             };
 
@@ -37,16 +37,19 @@ namespace Ipam.UnitTests
             // Simulate tag inheritance logic
             foreach (var tag in parentIP.Tags)
             {
-                if (!childIP.Tags.Exists(t => t.Name == tag.Name))
+                if (!childIP.Tags.ContainsKey(tag.Key))
                 {
-                    childIP.Tags.Add(new IpAllocationTag { Name = tag.Name, Value = tag.Value });
+                    childIP.Tags[tag.Key] = tag.Value;
                 }
             }
 
             // Assert
-            Assert.Contains(childIP.Tags, t => t.Name == "Environment" && t.Value == "Production");
-            Assert.Contains(childIP.Tags, t => t.Name == "Owner");
-            Assert.Contains(childIP.Tags, t => t.Name == "Service");
+            Assert.True(childIP.Tags.ContainsKey("Environment"));
+            Assert.Equal("Production", childIP.Tags["Environment"]);
+            Assert.True(childIP.Tags.ContainsKey("Owner"));
+            Assert.Equal("TeamA", childIP.Tags["Owner"]);
+            Assert.True(childIP.Tags.ContainsKey("Service"));
+            Assert.Equal("Web", childIP.Tags["Service"]);
         }
     }
 }

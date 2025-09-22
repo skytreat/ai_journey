@@ -1,18 +1,22 @@
 using Xunit;
 using Moq;
+using AutoMapper;
 using Ipam.DataAccess.Services;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
+using Ipam.ServiceContract.DTOs;
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Tests.Services
 {
     /// <summary>
-    /// Unit tests for IpAllocationService
+    /// Unit tests for IpAllocationServiceImpl
     /// </summary>
     /// <remarks>
     /// Author: IPAM Team
@@ -20,23 +24,30 @@ namespace Ipam.DataAccess.Tests.Services
     /// </remarks>
     public class IpAllocationServiceTests
     {
-        private readonly Mock<IIpNodeRepository> _ipNodeRepositoryMock;
+        private readonly Mock<IIpAllocationRepository> _ipNodeRepositoryMock;
         private readonly Mock<IpTreeService> _ipTreeServiceMock;
+        private readonly Mock<ConcurrentIpTreeService> _concurrentIpTreeServiceMock;
         private readonly Mock<PerformanceMonitoringService> _performanceServiceMock;
-        private readonly Mock<ILogger<IpAllocationService>> _loggerMock;
-        private readonly IpAllocationService _service;
+        private readonly Mock<IMapper> _mapperMock;
+        private readonly Mock<ILogger<IpAllocationServiceImpl>> _loggerMock;
+        private readonly IpAllocationServiceImpl _service;
 
         public IpAllocationServiceTests()
         {
-            _ipNodeRepositoryMock = new Mock<IIpNodeRepository>();
-            _ipTreeServiceMock = new Mock<IpTreeService>();
-            _performanceServiceMock = new Mock<PerformanceMonitoringService>();
-            _loggerMock = new Mock<ILogger<IpAllocationService>>();
+            _ipNodeRepositoryMock = new Mock<IIpAllocationRepository>();
+            var tagInheritanceServiceMock = new Mock<TagInheritanceService>(new Mock<ITagRepository>().Object);
+            _ipTreeServiceMock = new Mock<IpTreeService>(new Mock<IIpAllocationRepository>().Object, tagInheritanceServiceMock.Object);
+            _concurrentIpTreeServiceMock = new Mock<ConcurrentIpTreeService>(new Mock<IIpAllocationRepository>().Object, tagInheritanceServiceMock.Object);
+            _performanceServiceMock = new Mock<PerformanceMonitoringService>(new Mock<IMeterFactory>().Object, new Mock<ILogger<PerformanceMonitoringService>>().Object);
+            _mapperMock = new Mock<IMapper>();
+            _loggerMock = new Mock<ILogger<IpAllocationServiceImpl>>();
 
-            _service = new IpAllocationService(
+            _service = new IpAllocationServiceImpl(
                 _ipNodeRepositoryMock.Object,
                 _ipTreeServiceMock.Object,
+                _concurrentIpTreeServiceMock.Object,
                 _performanceServiceMock.Object,
+                _mapperMock.Object,
                 _loggerMock.Object);
         }
 
@@ -49,7 +60,7 @@ namespace Ipam.DataAccess.Tests.Services
             var count = 5;
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             _performanceServiceMock.Setup(x => x.MeasureAsync(
                 It.IsAny<string>(),
@@ -59,7 +70,7 @@ namespace Ipam.DataAccess.Tests.Services
                     (name, func, tags) => func());
 
             // Act
-            var result = await _service.FindAvailableSubnets("space1", parentCidr, subnetSize, count);
+            var result = await _service.FindAvailableSubnetsAsync("space1", parentCidr, subnetSize, count);
 
             // Assert
             Assert.Equal(count, result.Count);
@@ -74,10 +85,10 @@ namespace Ipam.DataAccess.Tests.Services
             var subnetSize = 24;
             var count = 3;
 
-            var existingNodes = new List<IpNode>
+            var existingNodes = new List<IpAllocationEntity>
             {
-                new IpNode { Prefix = "10.0.1.0/24" },
-                new IpNode { Prefix = "10.0.2.0/24" }
+                new IpAllocationEntity { Prefix = "10.0.1.0/24" },
+                new IpAllocationEntity { Prefix = "10.0.2.0/24" }
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
@@ -91,7 +102,7 @@ namespace Ipam.DataAccess.Tests.Services
                     (name, func, tags) => func());
 
             // Act
-            var result = await _service.FindAvailableSubnets("space1", parentCidr, subnetSize, count);
+            var result = await _service.FindAvailableSubnetsAsync("space1", parentCidr, subnetSize, count);
 
             // Assert
             Assert.Equal(count, result.Count);
@@ -106,11 +117,11 @@ namespace Ipam.DataAccess.Tests.Services
             var networkCidr = "10.0.0.0/24";
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             _performanceServiceMock.Setup(x => x.MeasureAsync(
                 It.IsAny<string>(),
-                It.IsAny<Func<Task<IpUtilizationStats>>>>(),
+                It.IsAny<Func<Task<IpUtilizationStats>>>(),
                 It.IsAny<Dictionary<string, object>>()))
                 .Returns<string, Func<Task<IpUtilizationStats>>, Dictionary<string, object>>(
                     (name, func, tags) => func());
@@ -130,10 +141,10 @@ namespace Ipam.DataAccess.Tests.Services
         {
             // Arrange
             var networkCidr = "10.0.0.0/24";
-            var subnets = new List<IpNode>
+            var subnets = new List<IpAllocationEntity>
             {
-                new IpNode { Prefix = "10.0.0.0/26" },   // 64 addresses
-                new IpNode { Prefix = "10.0.0.64/26" }   // 64 addresses
+                new IpAllocationEntity { Prefix = "10.0.0.0/26" },   // 64 addresses
+                new IpAllocationEntity { Prefix = "10.0.0.64/26" }   // 64 addresses
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
@@ -141,7 +152,7 @@ namespace Ipam.DataAccess.Tests.Services
 
             _performanceServiceMock.Setup(x => x.MeasureAsync(
                 It.IsAny<string>(),
-                It.IsAny<Func<Task<IpUtilizationStats>>>>(),
+                It.IsAny<Func<Task<IpUtilizationStats>>>(),
                 It.IsAny<Dictionary<string, object>>()))
                 .Returns<string, Func<Task<IpUtilizationStats>>, Dictionary<string, object>>(
                     (name, func, tags) => func());
@@ -163,10 +174,10 @@ namespace Ipam.DataAccess.Tests.Services
             var proposedCidr = "10.0.1.0/24";
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpNode>
+                .ReturnsAsync(new List<IpAllocationEntity>
                 {
-                    new IpNode { Prefix = "10.0.2.0/24" },
-                    new IpNode { Prefix = "10.0.3.0/24" }
+                    new IpAllocationEntity { Prefix = "10.0.2.0/24" },
+                    new IpAllocationEntity { Prefix = "10.0.3.0/24" }
                 });
 
             // Act
@@ -185,10 +196,10 @@ namespace Ipam.DataAccess.Tests.Services
             var proposedCidr = "10.0.1.0/24";
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpNode>
+                .ReturnsAsync(new List<IpAllocationEntity>
                 {
-                    new IpNode { Prefix = "10.0.1.0/25" },  // Overlaps with proposed
-                    new IpNode { Prefix = "10.0.2.0/24" }
+                    new IpAllocationEntity { Prefix = "10.0.1.0/25" },  // Overlaps with proposed
+                    new IpAllocationEntity { Prefix = "10.0.2.0/24" }
                 });
 
             // Act
@@ -207,16 +218,17 @@ namespace Ipam.DataAccess.Tests.Services
             var parentCidr = "10.0.0.0/16";
             var subnetSize = 24;
             var tags = new Dictionary<string, string> { { "Environment", "Test" } };
+            var expectedPrefix = "10.0.0.0/24";
 
-            var expectedNode = new IpNode
+            var expectedNode = new IpAllocationEntity
             {
                 Id = "test-id",
-                Prefix = "10.0.0.0/24",
+                Prefix = expectedPrefix,
                 Tags = tags
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             _performanceServiceMock.Setup(x => x.MeasureAsync(
                 It.IsAny<string>(),
@@ -225,15 +237,17 @@ namespace Ipam.DataAccess.Tests.Services
                 .Returns<string, Func<Task<List<string>>>, Dictionary<string, object>>(
                     (name, func, tags) => func());
 
-            _ipTreeServiceMock.Setup(x => x.CreateIpNodeAsync("space1", It.IsAny<string>(), tags))
+            _ipTreeServiceMock.Setup(x => x.CreateIpAllocationAsync("space1", expectedPrefix, tags))
                 .ReturnsAsync(expectedNode);
 
             // Act
             var result = await _service.AllocateNextSubnetAsync("space1", parentCidr, subnetSize, tags);
 
             // Assert
-            Assert.Equal(expectedNode, result);
-            _ipTreeServiceMock.Verify(x => x.CreateIpNodeAsync("space1", It.IsAny<string>(), tags), Times.Once);
+            Assert.NotNull(result);
+            Assert.Equal(expectedPrefix, result.Prefix);
+            Assert.Equal(tags, result.Tags);
+            _ipTreeServiceMock.Verify(x => x.CreateIpAllocationAsync("space1", expectedPrefix, tags), Times.Once);
         }
 
         [Fact]
@@ -244,12 +258,12 @@ namespace Ipam.DataAccess.Tests.Services
             var subnetSize = 32; // Individual hosts
 
             // Fill up all available space
-            var existingNodes = new List<IpNode>
+            var existingNodes = new List<IpAllocationEntity>
             {
-                new IpNode { Prefix = "10.0.0.0/32" },
-                new IpNode { Prefix = "10.0.0.1/32" },
-                new IpNode { Prefix = "10.0.0.2/32" },
-                new IpNode { Prefix = "10.0.0.3/32" }
+                new IpAllocationEntity { Prefix = "10.0.0.0/32" },
+                new IpAllocationEntity { Prefix = "10.0.0.1/32" },
+                new IpAllocationEntity { Prefix = "10.0.0.2/32" },
+                new IpAllocationEntity { Prefix = "10.0.0.3/32" }
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
@@ -276,7 +290,7 @@ namespace Ipam.DataAccess.Tests.Services
         {
             // Arrange
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             _performanceServiceMock.Setup(x => x.MeasureAsync(
                 It.IsAny<string>(),
@@ -286,7 +300,7 @@ namespace Ipam.DataAccess.Tests.Services
                     (name, func, tags) => func());
 
             // Act
-            var result = await _service.FindAvailableSubnets("space1", parentCidr, subnetSize, requestedCount);
+            var result = await _service.FindAvailableSubnetsAsync("space1", parentCidr, subnetSize, requestedCount);
 
             // Assert
             Assert.Equal(requestedCount, result.Count);

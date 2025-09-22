@@ -1,9 +1,11 @@
 using Ipam.DataAccess.Configuration;
 using Ipam.DataAccess.Interfaces;
+using Ipam.DataAccess.Mapping;
 using Ipam.DataAccess.Repositories;
 using Ipam.DataAccess.Repositories.Decorators;
 using Ipam.DataAccess.Services;
 using Ipam.DataAccess.Telemetry;
+using Ipam.ServiceContract.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,18 +31,21 @@ namespace Ipam.DataAccess
             services.Configure<DataAccessOptions>(configure);
 
             services.AddScoped<IAddressSpaceRepository, AddressSpaceRepository>();
-            services.AddScoped<IIpNodeRepository, IpNodeRepository>();
+            services.AddScoped<IIpAllocationRepository, IpAllocationRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IDataAccessService, DataAccessService>();
             
-            // Register business services
+            // Register domain services (used by service implementations)
             services.AddScoped<TagInheritanceService>();
             services.AddScoped<IpTreeService>();
-            services.AddScoped<AddressSpaceService>();
+            services.AddScoped<ConcurrentIpTreeService>();
             services.AddScoped<AuditService>();
             services.AddSingleton<PerformanceMonitoringService>();
-            services.AddScoped<IpAllocationService>();
+            
+            // Register service implementations with interfaces
+            services.AddScoped<IAddressSpaceService, AddressSpaceService>();
+            services.AddScoped<IIpAllocationService, IpAllocationServiceImpl>();
+            services.AddScoped<ITagService, TagServiceImpl>();
 
             services.AddOpenTelemetry()
                 .WithTracing(builder => builder
@@ -55,15 +60,18 @@ namespace Ipam.DataAccess
             if (options.EnableCaching)
             {
                 // Register the caching decorator manually since Decorate extension is not available
-                services.AddScoped<IIpNodeRepository>(provider =>
+                services.AddScoped<IIpAllocationRepository>(provider =>
                 {
-                    var baseRepository = new IpNodeRepository(provider.GetRequiredService<IConfiguration>());
+                    var baseRepository = new IpAllocationRepository(provider.GetRequiredService<IConfiguration>());
                     var cache = provider.GetRequiredService<IMemoryCache>();
                     var options = provider.GetRequiredService<IOptions<DataAccessOptions>>();
                     return new CachingIpNodeRepository(baseRepository, cache, options);
                 });
                 services.AddMemoryCache();
             }
+
+            // Add AutoMapper
+            services.AddAutoMapper(typeof(EntityDtoMappingProfile));
 
             return services;
         }

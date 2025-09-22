@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.DTOs;
 
 namespace Ipam.Client
 {

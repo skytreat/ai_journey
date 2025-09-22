@@ -1,5 +1,6 @@
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
+using Ipam.ServiceContract.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,30 +53,25 @@ namespace Ipam.DataAccess.Services
                     var tagDefinition = await _tagRepository.GetByNameAsync(addressSpaceId, tag.Key);
                     if (tagDefinition?.Type == "Inheritable" && tagDefinition.Implies != null)
                     {
-                        if (tagDefinition.Implies.TryGetValue(tag.Key, out var implications) &&
-                            implications.TryGetValue(tag.Value, out var impliedTags))
+                        // The Implies dictionary on a tag definition contains the tags that *it* implies.
+                        // The key is the implied tag's name.
+                        foreach (var implication in tagDefinition.Implies)
                         {
-                            // Parse implied tags (format: "Region=EuropeWest,Environment=Prod")
-                            var impliedTagPairs = impliedTags.Split(',');
-                            foreach (var impliedPair in impliedTagPairs)
-                            {
-                                var parts = impliedPair.Split('=');
-                                if (parts.Length == 2)
-                                {
-                                    var impliedKey = parts[0].Trim();
-                                    var impliedValue = parts[1].Trim();
+                            var impliedTagName = implication.Key;
+                            var valueMappings = implication.Value; // This maps current tag's value to implied tag's value.
 
-                                    if (!resultTags.ContainsKey(impliedKey))
-                                    {
-                                        resultTags[impliedKey] = impliedValue;
-                                        hasChanges = true;
-                                    }
-                                    else if (resultTags[impliedKey] != impliedValue)
-                                    {
-                                        throw new InvalidOperationException(
-                                            $"Tag implication conflict: {impliedKey} already has value {resultTags[impliedKey]}, " +
-                                            $"but {tag.Key}={tag.Value} implies {impliedKey}={impliedValue}");
-                                    }
+                            if (valueMappings.TryGetValue(tag.Value, out var impliedTagValue))
+                            {
+                                if (!resultTags.ContainsKey(impliedTagName))
+                                {
+                                    resultTags[impliedTagName] = impliedTagValue;
+                                    hasChanges = true;
+                                }
+                                else if (resultTags[impliedTagName] != impliedTagValue)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Tag implication conflict: {impliedTagName} already has value {resultTags[impliedTagName]}, " +
+                                        $"but {tag.Key}={tag.Value} implies {impliedTagName}={impliedTagValue}");
                                 }
                             }
                         }
@@ -167,7 +163,7 @@ namespace Ipam.DataAccess.Services
         public async Task PropagateTagsToChildren(
             string addressSpaceId,
             Dictionary<string, string> parentTags,
-            IEnumerable<IpNode> childNodes)
+            IEnumerable<IpAllocationEntity> childNodes)
         {
             if (parentTags == null || !childNodes.Any()) return;
 

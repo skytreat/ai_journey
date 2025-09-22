@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace Ipam.DataAccess.Models
+namespace Ipam.DataAccess.Entities
 {
     /// <summary>
     /// Represents a tag entity in the IPAM system
     /// </summary>
-    public class Tag : ITableEntity, IEntity
+    public class TagEntity : ITableEntity, IEntity
     {
         /// <summary>
         /// Gets or sets the partition key (AddressSpaceId)
@@ -49,25 +49,56 @@ namespace Ipam.DataAccess.Models
         public DateTime ModifiedOn { get; set; }
 
         private string _knownValues;
-        public string[] KnownValues
+        public List<string> KnownValues
         {
-            get => string.IsNullOrEmpty(_knownValues) ? Array.Empty<string>() : 
-                JsonSerializer.Deserialize<string[]>(_knownValues);
+            get => string.IsNullOrEmpty(_knownValues) ? new List<string>() : 
+                JsonSerializer.Deserialize<List<string>>(_knownValues);
             set => _knownValues = JsonSerializer.Serialize(value);
         }
 
         private string _implies;
+        
+        /// <summary>
+        /// Gets or sets the tag implications
+        /// </summary>
+        /// <remarks>
+        /// The format is:
+        /// {
+        ///     "ImpliedTag1": {
+        ///         "CurrentTagValue1": "ImpliedTag1Value1",
+        ///         "CurrentTagValue2": "ImpliedTag1Value2"
+        ///     },
+        ///     "ImpliedTag2": {
+        ///         "CurrentTagValue1": "ImpliedTag2Value1"
+        ///     }
+        /// }
+        /// </remarks>
         public Dictionary<string, Dictionary<string, string>> Implies
         {
-            get => string.IsNullOrEmpty(_implies) ? new Dictionary<string, Dictionary<string, string>>() : 
+            get => string.IsNullOrEmpty(_implies) ? new Dictionary<string, Dictionary<string, string>>() :
                 JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(_implies);
             set => _implies = JsonSerializer.Serialize(value);
         }
 
         private string _attributes;
+        
+        /// <summary>
+        /// Gets or sets additional attributes for the tag
+        /// <remarks>
+        /// The format is:
+        /// {
+        ///     "Attribute1": {
+        ///         "CurrentTagValue1": "Attribute1Value1",
+        ///         "CurrentTagValue2": "Attribute1Value2"
+        ///     },
+        ///     "Attribute2": {
+        ///         "CurrentTagValue1": "Attribute2Value1"
+        ///     }
+        /// }
+        /// </remarks>
         public Dictionary<string, Dictionary<string, string>> Attributes
         {
-            get => string.IsNullOrEmpty(_attributes) ? new Dictionary<string, Dictionary<string, string>>() : 
+            get => string.IsNullOrEmpty(_attributes) ? new Dictionary<string, Dictionary<string, string>>() :
                 JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(_attributes);
             set => _attributes = JsonSerializer.Serialize(value);
         }

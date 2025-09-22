@@ -2,11 +2,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Threading;
 using System.Threading.Tasks;
-using Ipam.DataAccess.Models;
 using Ipam.DataAccess.Configuration;
 using Ipam.DataAccess.Interfaces;
 using System.Collections.Generic;
 using System;
+using Ipam.DataAccess.Entities;
 
 namespace Ipam.DataAccess.Services
 {
@@ -40,7 +40,7 @@ namespace Ipam.DataAccess.Services
 
         private async Task InitializeRootAddressSpace(CancellationToken cancellationToken)
         {
-            var rootIpv6 = new IpNode
+            var rootIpv6 = new IpAllocationEntity
             {
                 PartitionKey = "system",
                 RowKey = "ipv6_root",
@@ -48,7 +48,7 @@ namespace Ipam.DataAccess.Services
                 Tags = new Dictionary<string, string> { { "Type", "Root" } }
             };
 
-            var rootIpv4 = new IpNode
+            var rootIpv4 = new IpAllocationEntity
             {
                 PartitionKey = "system",
                 RowKey = "ipv4_root",

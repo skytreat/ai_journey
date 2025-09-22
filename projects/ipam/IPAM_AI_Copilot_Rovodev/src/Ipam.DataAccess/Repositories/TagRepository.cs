@@ -1,20 +1,20 @@
 using Azure.Data.Tables;
 using Ipam.DataAccess.Extensions;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
 using Ipam.DataAccess.Validation;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ipam.DataAccess.Entities;
 
 namespace Ipam.DataAccess.Repositories
 {
     /// <summary>
     /// Implementation of tag repository using Azure Table Storage
     /// </summary>
-    public class TagRepository : BaseRepository<Tag>, ITagRepository
+    public class TagRepository : BaseRepository<TagEntity>, ITagRepository
     {
         private const string TableName = "Tags";
 
@@ -23,26 +23,26 @@ namespace Ipam.DataAccess.Repositories
         {
         }
 
-        public async Task<Tag> GetByNameAsync(string addressSpaceId, string tagName)
+        public async Task<TagEntity> GetByNameAsync(string addressSpaceId, string tagName)
         {
-            return await TableClient.GetEntityAsync<Tag>(addressSpaceId, tagName);
+            return await TableClient.GetEntityAsync<TagEntity>(addressSpaceId, tagName);
         }
 
-        public async Task<IEnumerable<Tag>> GetAllAsync(string addressSpaceId)
+        public async Task<IEnumerable<TagEntity>> GetAllAsync(string addressSpaceId)
         {
-            var query = TableClient.QueryAsync<Tag>(t => t.PartitionKey == addressSpaceId);
+            var query = TableClient.QueryAsync<TagEntity>(t => t.PartitionKey == addressSpaceId);
             return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<Tag>> SearchByNameAsync(string addressSpaceId, string nameFilter)
+        public async Task<IEnumerable<TagEntity>> SearchByNameAsync(string addressSpaceId, string nameFilter)
         {
-            var query = TableClient.QueryAsync<Tag>(t => 
+            var query = TableClient.QueryAsync<TagEntity>(t => 
                 t.PartitionKey == addressSpaceId && t.RowKey.Contains(nameFilter));
             
             return await query.ToListAsync();
         }
 
-        public async Task<Tag> CreateAsync(Tag tag)
+        public async Task<TagEntity> CreateAsync(TagEntity tag)
         {
             return await TableClient.ExecuteWithRetryAsync(async () =>
             {
@@ -56,7 +56,7 @@ namespace Ipam.DataAccess.Repositories
             });
         }
 
-        public async Task<Tag> UpdateAsync(Tag tag)
+        public async Task<TagEntity> UpdateAsync(TagEntity tag)
         {
             return await TableClient.ExecuteWithRetryAsync(async () =>
             {

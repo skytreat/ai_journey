@@ -1,12 +1,12 @@
 using Azure.Data.Tables;
 using Ipam.DataAccess.Extensions;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using Ipam.DataAccess.Entities;
 
 namespace Ipam.DataAccess.Repositories
 {
@@ -17,7 +17,7 @@ namespace Ipam.DataAccess.Repositories
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class AddressSpaceRepository : BaseRepository<AddressSpace>, IAddressSpaceRepository
+    public class AddressSpaceRepository : BaseRepository<AddressSpaceEntity>, IAddressSpaceRepository
     {
         private const string TableName = "AddressSpaces";
 
@@ -26,16 +26,29 @@ namespace Ipam.DataAccess.Repositories
         {
         }
 
-        public async Task<AddressSpace> GetByIdAsync(string partitionId, string addressSpaceId)
+        public async Task<AddressSpaceEntity> GetByIdAsync(string partitionId, string addressSpaceId)
         {
             return await TableClient.ExecuteWithRetryAsync(async () =>
-                await TableClient.GetEntityAsync<AddressSpace>(partitionId, addressSpaceId));
+                await TableClient.GetEntityAsync<AddressSpaceEntity>(partitionId, addressSpaceId));
         }
 
-        public async Task<IEnumerable<AddressSpace>> QueryAsync(string nameFilter = null, DateTime? createdAfter = null)
+        public async Task<IEnumerable<AddressSpaceEntity>> GetAllAsync(string partitionId)
         {
-            var query = TableClient.QueryAsync<AddressSpace>();
-            var results = new List<AddressSpace>();
+            var query = TableClient.QueryAsync<AddressSpaceEntity>(filter: $"PartitionKey eq '{partitionId}'");
+            var results = new List<AddressSpaceEntity>();
+
+            await foreach (var addressSpace in query)
+            {
+                results.Add(addressSpace);
+            }
+
+            return results;
+        }
+
+        public async Task<IEnumerable<AddressSpaceEntity>> QueryAsync(string nameFilter = null, DateTime? createdAfter = null)
+        {
+            var query = TableClient.QueryAsync<AddressSpaceEntity>();
+            var results = new List<AddressSpaceEntity>();
 
             await foreach (var addressSpace in query)
             {
@@ -51,7 +64,7 @@ namespace Ipam.DataAccess.Repositories
             return results;
         }
 
-        public async Task<AddressSpace> CreateAsync(AddressSpace addressSpace)
+        public async Task<AddressSpaceEntity> CreateAsync(AddressSpaceEntity addressSpace)
         {
             return await TableClient.ExecuteWithRetryAsync(async () =>
             {
@@ -62,7 +75,7 @@ namespace Ipam.DataAccess.Repositories
             });
         }
 
-        public async Task<AddressSpace> UpdateAsync(AddressSpace addressSpace)
+        public async Task<AddressSpaceEntity> UpdateAsync(AddressSpaceEntity addressSpace)
         {
             addressSpace.ModifiedOn = DateTime.UtcNow;
             await TableClient.UpdateEntityAsync(addressSpace, addressSpace.ETag);

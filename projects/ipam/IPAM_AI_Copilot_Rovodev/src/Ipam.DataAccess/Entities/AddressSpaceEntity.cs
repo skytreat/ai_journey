@@ -3,7 +3,7 @@ using Azure.Data.Tables;
 using Ipam.DataAccess.Interfaces;
 using System;
 
-namespace Ipam.DataAccess.Models
+namespace Ipam.DataAccess.Entities
 {
     /// <summary>
     /// Represents an IP address space entity in the IPAM system
@@ -12,7 +12,7 @@ namespace Ipam.DataAccess.Models
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class AddressSpace : ITableEntity, IEntity
+    public class AddressSpaceEntity : ITableEntity, IEntity
     {
         /// <summary>
         /// Gets or sets the partition key of the entity (PartitionId)

@@ -1,7 +1,7 @@
 using Xunit;
 using Moq;
 using Microsoft.Extensions.Configuration;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using Ipam.DataAccess.Repositories;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -15,8 +15,8 @@ namespace Ipam.DataAccess.Tests.Repositories
         public TagRepositoryTests()
         {
             var configMock = new Mock<IConfiguration>();
-            configMock.Setup(x => x.GetConnectionString("AzureTableStorage"))
-                .Returns("UseDevelopmentStorage=true");
+            configMock.Setup(c => c["ConnectionStrings:AzureTableStorage"])
+                       .Returns("UseDevelopmentStorage=true");
             
             _repository = new TagRepository(configMock.Object);
         }
@@ -25,12 +25,12 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CreateAsync_ValidTag_ShouldSucceed()
         {
             // Arrange
-            var tag = new Tag
+            var tag = new TagEntity
             {
                 PartitionKey = "space1",
                 RowKey = "Region",
                 Type = "Inheritable",
-                KnownValues = new[] { "USEast", "USWest" },
+                KnownValues = new List<string> { "USEast", "USWest" },
                 Implies = new Dictionary<string, Dictionary<string, string>>
                 {
                     { "Datacenter", new Dictionary<string, string> { { "USEast", "DC1" } } }
@@ -49,7 +49,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CreateAsync_CyclicImplication_ShouldThrowValidationException()
         {
             // Arrange
-            var tag = new Tag
+            var tag = new TagEntity
             {
                 PartitionKey = "space1",
                 RowKey = "Tag1",
@@ -60,7 +60,7 @@ namespace Ipam.DataAccess.Tests.Repositories
                 }
             };
 
-            var tag2 = new Tag
+            var tag2 = new TagEntity
             {
                 PartitionKey = "space1",
                 RowKey = "Tag2",

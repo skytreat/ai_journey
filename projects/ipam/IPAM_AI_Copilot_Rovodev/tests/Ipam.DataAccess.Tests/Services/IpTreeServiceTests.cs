@@ -2,7 +2,7 @@ using Xunit;
 using Moq;
 using Ipam.DataAccess.Services;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,14 +18,14 @@ namespace Ipam.DataAccess.Tests.Services
     /// </remarks>
     public class IpTreeServiceTests
     {
-        private readonly Mock<IIpNodeRepository> _ipNodeRepositoryMock;
+        private readonly Mock<IIpAllocationRepository> _ipNodeRepositoryMock;
         private readonly Mock<TagInheritanceService> _tagInheritanceServiceMock;
         private readonly IpTreeService _service;
 
         public IpTreeServiceTests()
         {
-            _ipNodeRepositoryMock = new Mock<IIpNodeRepository>();
-            _tagInheritanceServiceMock = new Mock<TagInheritanceService>();
+            _ipNodeRepositoryMock = new Mock<IIpAllocationRepository>();
+            _tagInheritanceServiceMock = new Mock<TagInheritanceService>(new Mock<ITagRepository>().Object);
             _service = new IpTreeService(_ipNodeRepositoryMock.Object, _tagInheritanceServiceMock.Object);
         }
 
@@ -39,12 +39,12 @@ namespace Ipam.DataAccess.Tests.Services
             var effectiveTags = new Dictionary<string, string> { { "Environment", "Test" }, { "Region", "USEast" } };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             _tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(addressSpaceId, tags))
                 .ReturnsAsync(effectiveTags);
 
-            var expectedNode = new IpNode
+            var expectedNode = new IpAllocationEntity
             {
                 Id = "test-id",
                 AddressSpaceId = addressSpaceId,
@@ -52,16 +52,16 @@ namespace Ipam.DataAccess.Tests.Services
                 Tags = effectiveTags
             };
 
-            _ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpNode>()))
+            _ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
                 .ReturnsAsync(expectedNode);
 
             // Act
-            var result = await _service.CreateIpNodeAsync(addressSpaceId, cidr, tags);
+            var result = await _service.CreateIpAllocationAsync(addressSpaceId, cidr, tags);
 
             // Assert
             Assert.Equal(expectedNode, result);
             _tagInheritanceServiceMock.Verify(x => x.ApplyTagImplications(addressSpaceId, tags), Times.Once);
-            _ipNodeRepositoryMock.Verify(x => x.CreateAsync(It.IsAny<IpNode>()), Times.Once);
+            _ipNodeRepositoryMock.Verify(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()), Times.Once);
         }
 
         [Fact]
@@ -71,7 +71,7 @@ namespace Ipam.DataAccess.Tests.Services
             var addressSpaceId = "space1";
             var cidr = "10.0.1.0/24";
             var tags = new Dictionary<string, string> { { "Environment", "Test" } };
-            var parentNode = new IpNode
+            var parentNode = new IpAllocationEntity
             {
                 Id = "parent-id",
                 Prefix = "10.0.0.0/16",
@@ -79,7 +79,7 @@ namespace Ipam.DataAccess.Tests.Services
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
-                .ReturnsAsync(new List<IpNode> { parentNode });
+                .ReturnsAsync(new List<IpAllocationEntity> { parentNode });
 
             _tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(addressSpaceId, tags))
                 .ReturnsAsync(tags);
@@ -87,12 +87,12 @@ namespace Ipam.DataAccess.Tests.Services
             _tagInheritanceServiceMock.Setup(x => x.GetEffectiveTags(addressSpaceId, parentNode.Tags, null))
                 .ReturnsAsync(parentNode.Tags);
 
-            var expectedNode = new IpNode { Id = "test-id", Prefix = cidr };
-            _ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpNode>()))
+            var expectedNode = new IpAllocationEntity { Id = "test-id", Prefix = cidr };
+            _ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
                 .ReturnsAsync(expectedNode);
 
             // Act
-            var result = await _service.CreateIpNodeAsync(addressSpaceId, cidr, tags);
+            var result = await _service.CreateIpAllocationAsync(addressSpaceId, cidr, tags);
 
             // Assert
             _tagInheritanceServiceMock.Verify(x => x.ValidateTagInheritance(
@@ -111,7 +111,7 @@ namespace Ipam.DataAccess.Tests.Services
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentException>(
-                () => _service.CreateIpNodeAsync(addressSpaceId, invalidCidr, tags));
+                () => _service.CreateIpAllocationAsync(addressSpaceId, invalidCidr, tags));
         }
 
         [Fact]
@@ -122,7 +122,7 @@ namespace Ipam.DataAccess.Tests.Services
             var cidr = "10.0.1.0/24";
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             // Act
             var result = await _service.FindClosestParentAsync(addressSpaceId, cidr);
@@ -137,11 +137,11 @@ namespace Ipam.DataAccess.Tests.Services
             // Arrange
             var addressSpaceId = "space1";
             var cidr = "10.0.1.0/24";
-            var nodes = new List<IpNode>
+            var nodes = new List<IpAllocationEntity>
             {
-                new IpNode { Id = "root", Prefix = "10.0.0.0/8" },      // Supernet
-                new IpNode { Id = "subnet", Prefix = "10.0.0.0/16" },   // Closer supernet
-                new IpNode { Id = "other", Prefix = "192.168.1.0/24" }  // Not a supernet
+                new IpAllocationEntity { Id = "root", Prefix = "10.0.0.0/8" },      // Supernet
+                new IpAllocationEntity { Id = "subnet", Prefix = "10.0.0.0/16" },   // Closer supernet
+                new IpAllocationEntity { Id = "other", Prefix = "192.168.1.0/24" }  // Not a supernet
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
@@ -161,10 +161,10 @@ namespace Ipam.DataAccess.Tests.Services
             // Arrange
             var addressSpaceId = "space1";
             var cidr = "10.0.1.0/24";
-            var nodes = new List<IpNode>
+            var nodes = new List<IpAllocationEntity>
             {
-                new IpNode { Id = "valid", Prefix = "10.0.0.0/16" },
-                new IpNode { Id = "invalid", Prefix = "invalid-prefix" }
+                new IpAllocationEntity { Id = "valid", Prefix = "10.0.0.0/16" },
+                new IpAllocationEntity { Id = "invalid", Prefix = "invalid-prefix" }
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
@@ -184,16 +184,16 @@ namespace Ipam.DataAccess.Tests.Services
             // Arrange
             var addressSpaceId = "space1";
             var ipId = "node-to-delete";
-            var nodeToDelete = new IpNode
+            var nodeToDelete = new IpAllocationEntity
             {
                 Id = ipId,
                 ParentId = "parent-id",
                 Tags = new Dictionary<string, string> { { "Environment", "Production" } }
             };
-            var children = new List<IpNode>
+            var children = new List<IpAllocationEntity>
             {
-                new IpNode { Id = "child1", ParentId = ipId, Tags = new Dictionary<string, string>() },
-                new IpNode { Id = "child2", ParentId = ipId, Tags = new Dictionary<string, string>() }
+                new IpAllocationEntity { Id = "child1", ParentId = ipId, Tags = new Dictionary<string, string>() },
+                new IpAllocationEntity { Id = "child2", ParentId = ipId, Tags = new Dictionary<string, string>() }
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetByIdAsync(addressSpaceId, ipId))
@@ -202,7 +202,7 @@ namespace Ipam.DataAccess.Tests.Services
                 .ReturnsAsync(children);
 
             // Act
-            await _service.DeleteIpNodeAsync(addressSpaceId, ipId);
+            await _service.DeleteIpAllocationAsync(addressSpaceId, ipId);
 
             // Assert
             _tagInheritanceServiceMock.Verify(x => x.PropagateTagsToChildren(
@@ -225,10 +225,10 @@ namespace Ipam.DataAccess.Tests.Services
             var ipId = "non-existent";
 
             _ipNodeRepositoryMock.Setup(x => x.GetByIdAsync(addressSpaceId, ipId))
-                .ReturnsAsync((IpNode)null);
+                .ReturnsAsync((IpAllocationEntity)null);
 
             // Act & Assert
-            await _service.DeleteIpNodeAsync(addressSpaceId, ipId);
+            await _service.DeleteIpAllocationAsync(addressSpaceId, ipId);
 
             // Verify no other operations were called
             _ipNodeRepositoryMock.Verify(x => x.GetChildrenAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -241,10 +241,10 @@ namespace Ipam.DataAccess.Tests.Services
             // Arrange
             var addressSpaceId = "space1";
             var parentId = "parent-id";
-            var expectedChildren = new List<IpNode>
+            var expectedChildren = new List<IpAllocationEntity>
             {
-                new IpNode { Id = "child1", ParentId = parentId },
-                new IpNode { Id = "child2", ParentId = parentId }
+                new IpAllocationEntity { Id = "child1", ParentId = parentId },
+                new IpAllocationEntity { Id = "child2", ParentId = parentId }
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, parentId))
@@ -267,7 +267,7 @@ namespace Ipam.DataAccess.Tests.Services
             // Arrange
             var addressSpaceId = "space1";
             var cidr = "10.0.1.0/24";
-            var parentNode = new IpNode
+            var parentNode = new IpAllocationEntity
             {
                 Id = "parent-id",
                 Prefix = cidr, // Same CIDR
@@ -276,7 +276,7 @@ namespace Ipam.DataAccess.Tests.Services
             var childTags = new Dictionary<string, string> { { "Environment", "Production" } }; // Same tags
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
-                .ReturnsAsync(new List<IpNode> { parentNode });
+                .ReturnsAsync(new List<IpAllocationEntity> { parentNode });
 
             _tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(addressSpaceId, childTags))
                 .ReturnsAsync(childTags);
@@ -287,7 +287,7 @@ namespace Ipam.DataAccess.Tests.Services
             // Act & Assert
             // The service should validate that child has additional inheritable tags
             // This might throw an exception or handle it differently based on implementation
-            var result = await _service.CreateIpNodeAsync(addressSpaceId, cidr, childTags);
+            var result = await _service.CreateIpAllocationAsync(addressSpaceId, cidr, childTags);
             
             // Verify that tag inheritance validation was called
             _tagInheritanceServiceMock.Verify(x => x.ApplyTagImplications(addressSpaceId, childTags), Times.Once);
@@ -300,25 +300,25 @@ namespace Ipam.DataAccess.Tests.Services
             var addressSpaceId = "space1";
             var cidr = "10.0.1.0/24";
             var tags = new Dictionary<string, string>();
-            var parentNode = new IpNode
+            var parentNode = new IpAllocationEntity
             {
                 Id = "parent-id",
                 Prefix = "10.0.0.0/16",
-                ChildrenIds = new string[0]
+                ChildrenIds = new List<string>() // Initially empty
             };
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(addressSpaceId, null))
-                .ReturnsAsync(new List<IpNode> { parentNode });
+                .ReturnsAsync(new List<IpAllocationEntity> { parentNode });
 
             _tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(addressSpaceId, tags))
                 .ReturnsAsync(tags);
 
-            var createdNode = new IpNode { Id = "new-node-id", Prefix = cidr };
-            _ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpNode>()))
+            var createdNode = new IpAllocationEntity { Id = "new-node-id", Prefix = cidr };
+            _ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
                 .ReturnsAsync(createdNode);
 
             // Act
-            var result = await _service.CreateIpNodeAsync(addressSpaceId, cidr, tags);
+            var result = await _service.CreateIpAllocationAsync(addressSpaceId, cidr, tags);
 
             // Assert
             Assert.Equal(createdNode, result);

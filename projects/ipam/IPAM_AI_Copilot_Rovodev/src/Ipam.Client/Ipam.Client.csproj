@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Ipam.DataAccess\Ipam.DataAccess.csproj" />
+    <ProjectReference Include="..\\Ipam.ServiceContract\\Ipam.ServiceContract.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,12 +2,14 @@ using Xunit;
 using Moq;
 using Ipam.DataAccess.Services;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
+using Ipam.ServiceContract.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Tests.Performance
 {
@@ -193,7 +195,7 @@ namespace Ipam.DataAccess.Tests.Performance
             var repositoryMock = CreateMockRepository(nodes);
             var optimizedService = new OptimizedIpTreeTraversalService(repositoryMock.Object);
 
-            var tasks = new List<Task<IpNode>>();
+            var tasks = new List<Task<IpAllocationEntity>>();
             var targetCidrs = new[]
             {
                 "10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24",
@@ -223,13 +225,13 @@ namespace Ipam.DataAccess.Tests.Performance
             }
         }
 
-        private static List<IpNode> GenerateHierarchicalNodes(int count)
+        private static List<IpAllocationEntity> GenerateHierarchicalNodes(int count)
         {
-            var nodes = new List<IpNode>();
+            var nodes = new List<IpAllocationEntity>();
             var random = new Random(42); // Fixed seed for reproducible tests
 
             // Create root nodes
-            nodes.Add(new IpNode
+            nodes.Add(new IpAllocationEntity
             {
                 Id = "root-ipv4",
                 PartitionKey = "space1",
@@ -245,7 +247,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 var prefix = GenerateRandomPrefix(depth, random);
                 var parentId = FindSuitableParent(nodes, prefix);
 
-                nodes.Add(new IpNode
+                nodes.Add(new IpAllocationEntity
                 {
                     Id = $"node-{i}",
                     PartitionKey = "space1",
@@ -258,9 +260,9 @@ namespace Ipam.DataAccess.Tests.Performance
             return nodes;
         }
 
-        private static List<IpNode> GenerateDeepTree(int maxDepth)
+        private static List<IpAllocationEntity> GenerateDeepTree(int maxDepth)
         {
-            var nodes = new List<IpNode>();
+            var nodes = new List<IpAllocationEntity>();
 
             // Create a single deep branch
             for (int depth = 0; depth < maxDepth; depth++)
@@ -271,7 +273,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 var prefix = $"10.0.0.0/{prefixLength}";
                 var parentId = depth > 0 ? $"node-{depth - 1}" : null;
 
-                nodes.Add(new IpNode
+                nodes.Add(new IpAllocationEntity
                 {
                     Id = $"node-{depth}",
                     PartitionKey = "space1",
@@ -300,7 +302,7 @@ namespace Ipam.DataAccess.Tests.Performance
             return $"{octet1}.{octet2}.{octet3}.{octet4}/{prefixLength}";
         }
 
-        private static string FindSuitableParent(List<IpNode> existingNodes, string targetPrefix)
+        private static string FindSuitableParent(List<IpAllocationEntity> existingNodes, string targetPrefix)
         {
             try
             {
@@ -329,9 +331,9 @@ namespace Ipam.DataAccess.Tests.Performance
             }
         }
 
-        private static Mock<IIpNodeRepository> CreateMockRepository(List<IpNode> nodes)
+        private static Mock<IIpAllocationRepository> CreateMockRepository(List<IpAllocationEntity> nodes)
         {
-            var mock = new Mock<IIpNodeRepository>();
+            var mock = new Mock<IIpAllocationRepository>();
             
             mock.Setup(x => x.GetChildrenAsync(It.IsAny<string>(), null))
                 .ReturnsAsync(nodes);
@@ -339,11 +341,11 @@ namespace Ipam.DataAccess.Tests.Performance
             return mock;
         }
 
-        private static async Task<IpNode> FindParentLinear(List<IpNode> nodes, string targetCidr)
+        private static async Task<IpAllocationEntity> FindParentLinear(List<IpAllocationEntity> nodes, string targetCidr)
         {
             // Simulate the current linear implementation
             var targetPrefix = new Prefix(targetCidr);
-            var closestParent = default(IpNode);
+            var closestParent = default(IpAllocationEntity);
             var maxMatchingLength = -1;
 
             foreach (var node in nodes)

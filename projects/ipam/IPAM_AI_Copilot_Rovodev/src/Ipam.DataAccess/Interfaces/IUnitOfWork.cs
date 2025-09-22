@@ -12,7 +12,7 @@ namespace Ipam.DataAccess.Interfaces
     public interface IUnitOfWork
     {
         IAddressSpaceRepository AddressSpaces { get; }
-        IIpNodeRepository IpNodes { get; }
+        IIpAllocationRepository IpNodes { get; }
         ITagRepository Tags { get; }
         
         Task SaveChangesAsync();

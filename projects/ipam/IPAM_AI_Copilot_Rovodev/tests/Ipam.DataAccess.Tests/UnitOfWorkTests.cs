@@ -8,14 +8,14 @@ namespace Ipam.DataAccess.Tests
     public class UnitOfWorkTests
     {
         private readonly Mock<IAddressSpaceRepository> _addressSpaceRepoMock;
-        private readonly Mock<IIpNodeRepository> _ipNodeRepoMock;
+        private readonly Mock<IIpAllocationRepository> _ipNodeRepoMock;
         private readonly Mock<ITagRepository> _tagRepoMock;
         private readonly UnitOfWork _unitOfWork;
 
         public UnitOfWorkTests()
         {
             _addressSpaceRepoMock = new Mock<IAddressSpaceRepository>();
-            _ipNodeRepoMock = new Mock<IIpNodeRepository>();
+            _ipNodeRepoMock = new Mock<IIpAllocationRepository>();
             _tagRepoMock = new Mock<ITagRepository>();
 
             _unitOfWork = new UnitOfWork(

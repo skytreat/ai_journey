@@ -1,4 +1,4 @@
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,10 +10,11 @@ namespace Ipam.DataAccess.Interfaces
     /// </summary>
     public interface IAddressSpaceRepository
     {
-        Task<AddressSpace> GetByIdAsync(string partitionId, string addressSpaceId);
-        Task<IEnumerable<AddressSpace>> QueryAsync(string nameFilter = null, DateTime? createdAfter = null);
-        Task<AddressSpace> CreateAsync(AddressSpace addressSpace);
-        Task<AddressSpace> UpdateAsync(AddressSpace addressSpace);
+        Task<AddressSpaceEntity> GetByIdAsync(string partitionId, string addressSpaceId);
+        Task<IEnumerable<AddressSpaceEntity>> QueryAsync(string nameFilter = null, DateTime? createdAfter = null);
+        Task<IEnumerable<AddressSpaceEntity>> GetAllAsync(string partitionId);
+        Task<AddressSpaceEntity> CreateAsync(AddressSpaceEntity addressSpace);
+        Task<AddressSpaceEntity> UpdateAsync(AddressSpaceEntity addressSpace);
         Task DeleteAsync(string partitionId, string addressSpaceId);
     }
 }

@@ -2,7 +2,7 @@ using Xunit;
 using Moq;
 using Ipam.DataAccess.Services;
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,7 +36,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 var tags = new Dictionary<string, string> { { "Test", $"Value{i}" } };
                 
                 tasks.Add(MeasureOperationAsync(() => 
-                    service.CreateIpNodeAsync(addressSpaceId, cidr, tags)));
+                    service.CreateIpAllocationAsync(addressSpaceId, cidr, tags)));
             }
 
             var results = await Task.WhenAll(tasks);
@@ -73,7 +73,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 var tags = new Dictionary<string, string> { { "Test", "Value" } };
                 
                 tasks.Add(MeasureOperationAsync(() => 
-                    service.CreateIpNodeAsync(addressSpaceId, cidr, tags)));
+                    service.CreateIpAllocationAsync(addressSpaceId, cidr, tags)));
             }
 
             var results = await Task.WhenAll(tasks);
@@ -107,7 +107,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 var cidr = "10.0.1.0/24";
                 var tags = new Dictionary<string, string> { { "Test", "Value" } };
                 
-                tasks.Add(service.CreateIpNodeAsync(addressSpaceId, cidr, tags));
+                tasks.Add(service.CreateIpAllocationAsync(addressSpaceId, cidr, tags));
             }
 
             await Task.WhenAll(tasks);
@@ -142,7 +142,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 var tags = new Dictionary<string, string> { { "Test", $"Value{i}" } };
                 
                 tasks.Add(MeasureOperationAsync(() => 
-                    service.CreateIpNodeAsync(addressSpaceId, cidr, tags)));
+                    service.CreateIpAllocationAsync(addressSpaceId, cidr, tags)));
             }
 
             var results = await Task.WhenAll(tasks);
@@ -165,13 +165,13 @@ namespace Ipam.DataAccess.Tests.Performance
             var addressSpaceId = "space1";
 
             // Act - Start long-running operation and quick operation
-            var longTask = service.CreateIpNodeAsync(addressSpaceId, "10.0.1.0/24", 
+            var longTask = service.CreateIpAllocationAsync(addressSpaceId, "10.0.1.0/24", 
                 new Dictionary<string, string> { { "Test", "Long" } });
             
             await Task.Delay(100); // Ensure long task starts first
             
             var quickTaskTimer = Stopwatch.StartNew();
-            var quickTask = service.CreateIpNodeAsync(addressSpaceId, "10.0.2.0/24", 
+            var quickTask = service.CreateIpAllocationAsync(addressSpaceId, "10.0.2.0/24", 
                 new Dictionary<string, string> { { "Test", "Quick" } });
 
             await Task.WhenAll(longTask, quickTask);
@@ -200,21 +200,21 @@ namespace Ipam.DataAccess.Tests.Performance
 
         private static ConcurrentIpTreeService CreateMockedService()
         {
-            var ipNodeRepositoryMock = new Mock<IIpNodeRepository>();
-            var tagInheritanceServiceMock = new Mock<TagInheritanceService>();
+            var ipNodeRepositoryMock = new Mock<IIpAllocationRepository>();
+            var tagInheritanceServiceMock = new Mock<TagInheritanceService>(new Mock<ITagRepository>().Object);
 
             // Setup fast, successful operations
             ipNodeRepositoryMock.Setup(x => x.GetByPrefixAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(It.IsAny<string>(), null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
                 .ReturnsAsync((string _, Dictionary<string, string> tags) => tags);
 
-            ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpNode>()))
-                .ReturnsAsync((IpNode node) => node);
+            ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
+                .ReturnsAsync((IpAllocationEntity node) => node);
 
             return new ConcurrentIpTreeService(
                 ipNodeRepositoryMock.Object,
@@ -223,21 +223,21 @@ namespace Ipam.DataAccess.Tests.Performance
 
         private static ConcurrentIpTreeService CreateMockedServiceWithDelay(TimeSpan delay)
         {
-            var ipNodeRepositoryMock = new Mock<IIpNodeRepository>();
-            var tagInheritanceServiceMock = new Mock<TagInheritanceService>();
+            var ipNodeRepositoryMock = new Mock<IIpAllocationRepository>();
+            var tagInheritanceServiceMock = new Mock<TagInheritanceService>(new Mock<ITagRepository>().Object);
 
             ipNodeRepositoryMock.Setup(x => x.GetByPrefixAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync(It.IsAny<string>(), null))
-                .ReturnsAsync(new List<IpNode>());
+                .ReturnsAsync(new List<IpAllocationEntity>());
 
             tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
                 .ReturnsAsync((string _, Dictionary<string, string> tags) => tags);
 
             // Add delay to simulate long-running operation
-            ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpNode>()))
-                .Returns(async (IpNode node) =>
+            ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
+                .Returns(async (IpAllocationEntity node) =>
                 {
                     await Task.Delay(delay);
                     return node;

@@ -1,8 +1,8 @@
 using Xunit;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
-using Ipam.DataAccess;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.Interfaces;
+using Ipam.ServiceContract.DTOs;
 using Ipam.Frontend.Controllers;
 using Ipam.Frontend.Models;
 using System.Threading.Tasks;
@@ -11,13 +11,13 @@ namespace Ipam.Frontend.Tests.Controllers
 {
     public class AddressSpacesControllerTests
     {
-        private readonly Mock<IDataAccessService> _dataServiceMock;
+        private readonly Mock<IAddressSpaceService> _addressSpaceServiceMock;
         private readonly AddressSpacesController _controller;
 
         public AddressSpacesControllerTests()
         {
-            _dataServiceMock = new Mock<IDataAccessService>();
-            _controller = new AddressSpacesController(_dataServiceMock.Object);
+            _addressSpaceServiceMock = new Mock<IAddressSpaceService>();
+            _controller = new AddressSpacesController(_addressSpaceServiceMock.Object);
         }
 
         [Fact]
@@ -26,7 +26,7 @@ namespace Ipam.Frontend.Tests.Controllers
             // Arrange
             var model = new AddressSpaceCreateModel { Name = "Test Space" };
             var addressSpace = new AddressSpace { Id = "1", Name = "Test Space" };
-            _dataServiceMock.Setup(x => x.CreateAddressSpaceAsync(It.IsAny<AddressSpace>()))
+            _addressSpaceServiceMock.Setup(x => x.CreateAddressSpaceAsync(It.IsAny<AddressSpace>(), CancellationToken.None))
                 .ReturnsAsync(addressSpace);
 
             // Act
@@ -42,7 +42,7 @@ namespace Ipam.Frontend.Tests.Controllers
         {
             // Arrange
             var addressSpace = new AddressSpace { Id = "1" };
-            _dataServiceMock.Setup(x => x.GetAddressSpaceAsync("1"))
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpaceByIdAsync("1", CancellationToken.None))
                 .ReturnsAsync(addressSpace);
 
             // Act

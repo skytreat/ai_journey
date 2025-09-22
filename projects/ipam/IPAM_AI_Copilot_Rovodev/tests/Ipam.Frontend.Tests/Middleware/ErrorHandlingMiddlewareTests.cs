@@ -240,10 +240,10 @@ namespace Ipam.Frontend.Tests.Middleware
             _loggerMock.Verify(
                 x => x.Log(
                     LogLevel.Error,
-                    It.IsAny<EventId>(),
+                    It.Is<EventId>(e => e.Id != 0),
                     It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Test exception for logging")),
                     exception,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    It.Is<Func<It.IsAnyType, Exception, string>>(f => f != null)),
                 Times.Once);
         }
 

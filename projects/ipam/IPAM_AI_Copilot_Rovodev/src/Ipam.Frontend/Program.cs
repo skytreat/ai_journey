@@ -32,9 +32,6 @@ namespace Ipam.Frontend
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            // Add AutoMapper
-            builder.Services.AddAutoMapper(typeof(Program));
-
             var app = builder.Build();
 
             // Configure the HTTP request pipeline
@@ -44,6 +41,9 @@ namespace Ipam.Frontend
                 app.UseSwaggerUI();
             }
 
+            // Add global error handling middleware
+            app.UseMiddleware<Ipam.Frontend.Middleware.GlobalErrorHandlingMiddleware>();
+            
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();

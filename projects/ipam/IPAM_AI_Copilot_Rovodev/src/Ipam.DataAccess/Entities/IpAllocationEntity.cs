@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace Ipam.DataAccess.Models
+namespace Ipam.DataAccess.Entities
 {
     /// <summary>
-    /// Represents an IP node entity in the IPAM system
+    /// Represents an IP allocation entity in the IPAM system
     /// </summary>
-    public class IpNode : ITableEntity, IEntity
+    public class IpAllocationEntity : ITableEntity, IEntity
     {
         /// <summary>
         /// Gets or sets the partition key (AddressSpaceId)
@@ -46,10 +46,10 @@ namespace Ipam.DataAccess.Models
         public string Prefix { get; set; }
         public string ParentId { get; set; }
         private string _childrenIds;
-        public string[] ChildrenIds
+        public List<string> ChildrenIds
         {
-            get => string.IsNullOrEmpty(_childrenIds) ? Array.Empty<string>() : 
-                JsonSerializer.Deserialize<string[]>(_childrenIds);
+            get => string.IsNullOrEmpty(_childrenIds) ? new List<string>() : 
+                JsonSerializer.Deserialize<List<string>>(_childrenIds);
             set => _childrenIds = JsonSerializer.Serialize(value);
         }
 

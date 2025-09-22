@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Ipam.DataAccess;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.DTOs;
+using Ipam.ServiceContract.Interfaces;
 using Ipam.Frontend.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Ipam.Frontend.Controllers
 {
@@ -21,13 +22,13 @@ namespace Ipam.Frontend.Controllers
     [Authorize]
     [ApiController]
     [Route("api/addressspaces/{addressSpaceId}/ipnodes")]
-    public class IpNodeController : ControllerBase
+    public class IpAllocationController : ControllerBase
     {
-        private readonly IDataAccessService _dataAccessService;
+        private readonly IIpAllocationService _ipAllocationService;
 
-        public IpNodeController(IDataAccessService dataAccessService)
+        public IpAllocationController(IIpAllocationService ipAllocationService)
         {
-            _dataAccessService = dataAccessService;
+            _ipAllocationService = ipAllocationService;
         }
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace Ipam.Frontend.Controllers
         [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "addressSpaceId", "ipId" })]
         public async Task<IActionResult> GetById(string addressSpaceId, string ipId)
         {
-            var ipAllocation = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            var ipAllocation = await _ipAllocationService.GetIpAllocationByIdAsync(addressSpaceId, ipId);
             if (ipAllocation == null)
                 return NotFound();
 
@@ -51,7 +52,7 @@ namespace Ipam.Frontend.Controllers
         [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "addressSpaceId", "cidr", "tags" })]
         public async Task<IActionResult> GetAll(string addressSpaceId, [FromQuery] string cidr = null, [FromQuery] Dictionary<string, string> tags = null)
         {
-            var ipAllocations = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, cidr, tags);
+            var ipAllocations = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
             return Ok(ipAllocations);
         }
 
@@ -74,12 +75,12 @@ namespace Ipam.Frontend.Controllers
                 Id = Guid.NewGuid().ToString(),
                 AddressSpaceId = addressSpaceId,
                 Prefix = model.Prefix,
-                Tags = model.Tags?.Select(t => new IpAllocationTag { Name = t.Key, Value = t.Value }).ToList() ?? new List<IpAllocationTag>(),
+                Tags = model.Tags ?? new Dictionary<string, string>(),
                 CreatedOn = DateTime.UtcNow,
                 ModifiedOn = DateTime.UtcNow
             };
 
-            var result = await _dataAccessService.CreateIPAddressAsync(ipAllocation);
+            var result = await _ipAllocationService.CreateIpAllocationAsync(ipAllocation);
             return CreatedAtAction(nameof(GetById), 
                 new { addressSpaceId = addressSpaceId, ipId = result.Id }, 
                 result);
@@ -96,16 +97,16 @@ namespace Ipam.Frontend.Controllers
                 return BadRequest(ModelState);
 
             // Get existing IP allocation
-            var existingIpAllocation = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            var existingIpAllocation = await _ipAllocationService.GetIpAllocationByIdAsync(addressSpaceId, ipId);
             if (existingIpAllocation == null)
                 return NotFound();
 
             // Update properties
             existingIpAllocation.Prefix = model.Prefix;
-            existingIpAllocation.Tags = model.Tags?.Select(t => new IpAllocationTag { Name = t.Key, Value = t.Value }).ToList() ?? new List<IpAllocationTag>();
+            existingIpAllocation.Tags = model.Tags ?? new Dictionary<string, string>();
             existingIpAllocation.ModifiedOn = DateTime.UtcNow;
 
-            var updatedIpAllocation = await _dataAccessService.UpdateIPAddressAsync(existingIpAllocation);
+            var updatedIpAllocation = await _ipAllocationService.UpdateIpAllocationAsync(existingIpAllocation);
             return Ok(updatedIpAllocation);
         }
 
@@ -116,11 +117,11 @@ namespace Ipam.Frontend.Controllers
         [Authorize(Roles = "SystemAdmin,AddressSpaceAdmin,AddressSpaceOperator")]
         public async Task<IActionResult> Delete(string addressSpaceId, string ipId)
         {
-            var existingIpAllocation = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            var existingIpAllocation = await _ipAllocationService.GetIpAllocationByIdAsync(addressSpaceId, ipId);
             if (existingIpAllocation == null)
                 return NotFound();
 
-            await _dataAccessService.DeleteIPAddressAsync(addressSpaceId, ipId);
+            await _ipAllocationService.DeleteIpAllocationAsync(addressSpaceId, ipId, CancellationToken.None);
             return NoContent();
         }
 
@@ -134,7 +135,7 @@ namespace Ipam.Frontend.Controllers
             if (string.IsNullOrEmpty(prefix))
                 return BadRequest("Prefix parameter is required.");
 
-            var ipAllocations = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, prefix, null);
+            var ipAllocations = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
             return Ok(ipAllocations);
         }
 
@@ -148,7 +149,7 @@ namespace Ipam.Frontend.Controllers
             if (tags == null || !tags.Any())
                 return BadRequest("At least one tag must be specified.");
 
-            var ipAllocations = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, null, tags);
+            var ipAllocations = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
             return Ok(ipAllocations);
         }
 
@@ -160,12 +161,12 @@ namespace Ipam.Frontend.Controllers
         public async Task<IActionResult> GetChildren(string addressSpaceId, string ipId)
         {
             // First verify the parent IP exists
-            var parentIp = await _dataAccessService.GetIPAddressAsync(addressSpaceId, ipId);
+            var parentIp = await _ipAllocationService.GetIpAllocationByIdAsync(addressSpaceId, ipId);
             if (parentIp == null)
                 return NotFound("Parent IP node not found.");
 
             // Get all IPs in the address space and filter for children
-            var allIps = await _dataAccessService.GetIPAddressesAsync(addressSpaceId, null, null);
+            var allIps = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
             var children = allIps.Where(ip => ip.ParentId == ipId);
             
             return Ok(children);

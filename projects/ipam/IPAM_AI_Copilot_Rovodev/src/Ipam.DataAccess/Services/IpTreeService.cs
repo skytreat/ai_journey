@@ -1,6 +1,8 @@
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.DataAccess.Entities;
 using Ipam.DataAccess.Validation;
+using Ipam.ServiceContract.DTOs;
+using Ipam.ServiceContract.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,11 +19,11 @@ namespace Ipam.DataAccess.Services
     /// </remarks>
     public class IpTreeService
     {
-        private readonly IIpNodeRepository _ipNodeRepository;
+        private readonly IIpAllocationRepository _ipNodeRepository;
         private readonly TagInheritanceService _tagInheritanceService;
 
         public IpTreeService(
-            IIpNodeRepository ipNodeRepository,
+            IIpAllocationRepository ipNodeRepository,
             TagInheritanceService tagInheritanceService)
         {
             _ipNodeRepository = ipNodeRepository;
@@ -35,7 +37,7 @@ namespace Ipam.DataAccess.Services
         /// <param name="cidr">The CIDR notation</param>
         /// <param name="tags">The tags for the IP node</param>
         /// <returns>The created IP node</returns>
-        public async Task<IpNode> CreateIpNodeAsync(
+        public async Task<IpAllocationEntity> CreateIpAllocationAsync(
             string addressSpaceId, 
             string cidr, 
             Dictionary<string, string> tags)
@@ -66,7 +68,7 @@ namespace Ipam.DataAccess.Services
             }
 
             // Create the IP node
-            var ipNode = new IpNode
+            var ipNode = new IpAllocationEntity
             {
                 Id = Guid.NewGuid().ToString(),
                 AddressSpaceId = addressSpaceId,
@@ -95,12 +97,12 @@ namespace Ipam.DataAccess.Services
         /// <param name="addressSpaceId">The address space ID</param>
         /// <param name="cidr">The CIDR to find parent for</param>
         /// <returns>The closest parent node or null if no parent found</returns>
-        public async Task<IpNode> FindClosestParentAsync(string addressSpaceId, string cidr)
+        public async Task<IpAllocationEntity> FindClosestParentAsync(string addressSpaceId, string cidr)
         {
             var targetPrefix = new Prefix(cidr);
             var allNodes = await _ipNodeRepository.GetChildrenAsync(addressSpaceId, null);
             
-            IpNode closestParent = null;
+            IpAllocationEntity closestParent = null;
             int maxMatchingLength = -1;
 
             foreach (var node in allNodes)
@@ -132,7 +134,7 @@ namespace Ipam.DataAccess.Services
         /// </summary>
         /// <param name="addressSpaceId">The address space ID</param>
         /// <param name="ipId">The IP node ID to delete</param>
-        public async Task DeleteIpNodeAsync(string addressSpaceId, string ipId)
+        public async Task DeleteIpAllocationAsync(string addressSpaceId, string ipId)
         {
             var nodeToDelete = await _ipNodeRepository.GetByIdAsync(addressSpaceId, ipId);
             if (nodeToDelete == null) return;
@@ -167,7 +169,7 @@ namespace Ipam.DataAccess.Services
         /// <param name="addressSpaceId">The address space ID</param>
         /// <param name="parentId">The parent node ID</param>
         /// <returns>List of child nodes</returns>
-        public async Task<IEnumerable<IpNode>> GetChildrenAsync(string addressSpaceId, string parentId)
+        public async Task<IEnumerable<IpAllocationEntity>> GetChildrenAsync(string addressSpaceId, string parentId)
         {
             return await _ipNodeRepository.GetChildrenAsync(addressSpaceId, parentId);
         }
@@ -215,13 +217,13 @@ namespace Ipam.DataAccess.Services
         /// <summary>
         /// Adds a child ID to parent's children list
         /// </summary>
-        private async Task AddChildToParent(IpNode parent, string childId)
+        private async Task AddChildToParent(IpAllocationEntity parent, string childId)
         {
             var childrenList = parent.ChildrenIds?.ToList() ?? new List<string>();
             if (!childrenList.Contains(childId))
             {
                 childrenList.Add(childId);
-                parent.ChildrenIds = childrenList.ToArray();
+                parent.ChildrenIds = childrenList;
                 await _ipNodeRepository.UpdateAsync(parent);
             }
         }
@@ -237,7 +239,7 @@ namespace Ipam.DataAccess.Services
                 var childrenList = parent.ChildrenIds?.ToList() ?? new List<string>();
                 if (childrenList.Remove(childId))
                 {
-                    parent.ChildrenIds = childrenList.ToArray();
+                    parent.ChildrenIds = childrenList;
                     await _ipNodeRepository.UpdateAsync(parent);
                 }
             }

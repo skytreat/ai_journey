@@ -1,5 +1,6 @@
 using Ipam.DataAccess.Interfaces;
-using Ipam.DataAccess.Models;
+using Ipam.ServiceContract.DTOs;
+using Ipam.DataAccess.Entities;
 using Ipam.DataAccess.Validation;
 using Ipam.DataAccess.Exceptions;
 using System;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
+using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Services
 {
@@ -20,17 +22,17 @@ namespace Ipam.DataAccess.Services
     /// </remarks>
     public class ConcurrentIpTreeService
     {
-        private readonly IIpNodeRepository _ipNodeRepository;
+        private readonly IIpAllocationRepository _ipAllocationRepository;
         private readonly TagInheritanceService _tagInheritanceService;
         private readonly SemaphoreSlim _creationSemaphore;
         private readonly Dictionary<string, SemaphoreSlim> _addressSpaceLocks;
         private readonly object _lockDictionary = new object();
 
         public ConcurrentIpTreeService(
-            IIpNodeRepository ipNodeRepository,
+            IIpAllocationRepository ipAllocationRepository,
             TagInheritanceService tagInheritanceService)
         {
-            _ipNodeRepository = ipNodeRepository;
+            _ipAllocationRepository = ipAllocationRepository;
             _tagInheritanceService = tagInheritanceService;
             _creationSemaphore = new SemaphoreSlim(10, 10); // Allow up to 10 concurrent creations
             _addressSpaceLocks = new Dictionary<string, SemaphoreSlim>();
@@ -44,14 +46,12 @@ namespace Ipam.DataAccess.Services
         /// <param name="tags">The tags for the IP node</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The created IP node</returns>
-        public async Task<IpNode> CreateIpNodeAsync(
-            string addressSpaceId, 
-            string cidr, 
-            Dictionary<string, string> tags,
+        public async Task<IpAllocationEntity> CreateIpAllocationAsync(
+            IpAllocation ipAllocation,
             CancellationToken cancellationToken = default)
         {
             // Get address space specific lock
-            var addressSpaceLock = GetAddressSpaceLock(addressSpaceId);
+            var addressSpaceLock = GetAddressSpaceLock(ipAllocation.AddressSpaceId);
             
             await _creationSemaphore.WaitAsync(cancellationToken);
             try
@@ -59,7 +59,7 @@ namespace Ipam.DataAccess.Services
                 await addressSpaceLock.WaitAsync(cancellationToken);
                 try
                 {
-                    return await CreateIpNodeWithLockAsync(addressSpaceId, cidr, tags, cancellationToken);
+                    return await CreateIpAllocationWithLockAsync(ipAllocation.AddressSpaceId, ipAllocation.Prefix, ipAllocation.Tags, cancellationToken);
                 }
                 finally
                 {
@@ -72,7 +72,7 @@ namespace Ipam.DataAccess.Services
             }
         }
 
-        private async Task<IpNode> CreateIpNodeWithLockAsync(
+        private async Task<IpAllocationEntity> CreateIpAllocationWithLockAsync(
             string addressSpaceId,
             string cidr,
             Dictionary<string, string> tags,
@@ -89,7 +89,7 @@ namespace Ipam.DataAccess.Services
                     IpamValidator.ValidateCidr(cidr);
 
                     // Check for existing node with same CIDR
-                    var existingNodes = await _ipNodeRepository.GetByPrefixAsync(addressSpaceId, cidr);
+                    var existingNodes = await _ipAllocationRepository.GetByPrefixAsync(addressSpaceId, cidr);
                     var exactMatch = existingNodes.FirstOrDefault(n => n.Prefix == cidr);
 
                     if (exactMatch != null)
@@ -107,7 +107,7 @@ namespace Ipam.DataAccess.Services
                     if (parentNode != null)
                     {
                         // Re-fetch parent to ensure we have the latest version
-                        var currentParent = await _ipNodeRepository.GetByIdAsync(addressSpaceId, parentNode.Id);
+                        var currentParent = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, parentNode.Id);
                         if (currentParent == null)
                         {
                             throw new ConcurrencyException("Parent node was deleted during creation process");
@@ -127,7 +127,7 @@ namespace Ipam.DataAccess.Services
                     }
 
                     // Create the IP node with optimistic concurrency
-                    var ipNode = new IpNode
+                    var ipNode = new IpAllocationEntity
                     {
                         Id = Guid.NewGuid().ToString(),
                         AddressSpaceId = addressSpaceId,
@@ -140,7 +140,7 @@ namespace Ipam.DataAccess.Services
                     };
 
                     // Attempt to create the node
-                    var createdNode = await _ipNodeRepository.CreateAsync(ipNode);
+                    var createdNode = await _ipAllocationRepository.CreateAsync(ipNode);
 
                     // Update parent's children list if parent exists
                     if (parentNode != null)
@@ -175,12 +175,12 @@ namespace Ipam.DataAccess.Services
             throw new ConcurrencyException("Maximum retry attempts exceeded for IP node creation");
         }
 
-        private async Task<IpNode> FindClosestParentWithVersionCheckAsync(string addressSpaceId, string cidr)
+        private async Task<IpAllocationEntity> FindClosestParentWithVersionCheckAsync(string addressSpaceId, string cidr)
         {
             var targetPrefix = new Prefix(cidr);
-            var allNodes = await _ipNodeRepository.GetChildrenAsync(addressSpaceId, null);
+            var allNodes = await _ipAllocationRepository.GetAllAsync(addressSpaceId);
             
-            IpNode closestParent = null;
+            IpAllocationEntity closestParent = null;
             int maxMatchingLength = -1;
 
             foreach (var node in allNodes)
@@ -206,7 +206,7 @@ namespace Ipam.DataAccess.Services
             return closestParent;
         }
 
-        private async Task UpdateParentChildrenListAsync(IpNode parent, string childId, CancellationToken cancellationToken)
+        private async Task UpdateParentChildrenListAsync(IpAllocationEntity parent, string childId, CancellationToken cancellationToken)
         {
             const int maxRetries = 3;
             var retryCount = 0;
@@ -216,7 +216,7 @@ namespace Ipam.DataAccess.Services
                 try
                 {
                     // Re-fetch parent to get current ETag
-                    var currentParent = await _ipNodeRepository.GetByIdAsync(parent.AddressSpaceId, parent.Id);
+                    var currentParent = await _ipAllocationRepository.GetByIdAsync(parent.AddressSpaceId, parent.Id);
                     if (currentParent == null)
                     {
                         // Parent was deleted, which is acceptable
@@ -228,10 +228,10 @@ namespace Ipam.DataAccess.Services
                     if (!childrenList.Contains(childId))
                     {
                         childrenList.Add(childId);
-                        currentParent.ChildrenIds = childrenList.ToArray();
+                        currentParent.ChildrenIds = childrenList;
                         currentParent.ModifiedOn = DateTime.UtcNow;
 
-                        await _ipNodeRepository.UpdateAsync(currentParent);
+                        await _ipAllocationRepository.UpdateAsync(currentParent);
                     }
                     return;
                 }
@@ -300,7 +300,7 @@ namespace Ipam.DataAccess.Services
         /// <summary>
         /// Concurrent-safe deletion with proper cleanup
         /// </summary>
-        public async Task DeleteIpNodeAsync(string addressSpaceId, string ipId, CancellationToken cancellationToken = default)
+        public async Task DeleteIpAllocationAsync(string addressSpaceId, string ipId, CancellationToken cancellationToken = default)
         {
             var addressSpaceLock = GetAddressSpaceLock(addressSpaceId);
             
@@ -314,11 +314,11 @@ namespace Ipam.DataAccess.Services
                 {
                     try
                     {
-                        var nodeToDelete = await _ipNodeRepository.GetByIdAsync(addressSpaceId, ipId);
+                        var nodeToDelete = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, ipId);
                         if (nodeToDelete == null) return;
 
                         // Get all children
-                        var children = await _ipNodeRepository.GetChildrenAsync(addressSpaceId, ipId);
+                        var children = await _ipAllocationRepository.GetChildrenAsync(addressSpaceId, ipId);
 
                         // Propagate inheritable tags to children
                         await _tagInheritanceService.PropagateTagsToChildren(
@@ -328,7 +328,7 @@ namespace Ipam.DataAccess.Services
                         foreach (var child in children)
                         {
                             child.ParentId = nodeToDelete.ParentId;
-                            await _ipNodeRepository.UpdateAsync(child);
+                            await _ipAllocationRepository.UpdateAsync(child);
                         }
 
                         // Remove from parent's children list
@@ -338,7 +338,7 @@ namespace Ipam.DataAccess.Services
                         }
 
                         // Delete the node
-                        await _ipNodeRepository.DeleteAsync(addressSpaceId, ipId);
+                        await _ipAllocationRepository.DeleteAsync(addressSpaceId, ipId);
                         return;
                     }
                     catch (RequestFailedException ex) when (ex.Status == 412 || ex.Status == 409)
@@ -366,15 +366,15 @@ namespace Ipam.DataAccess.Services
             {
                 try
                 {
-                    var parent = await _ipNodeRepository.GetByIdAsync(addressSpaceId, parentId);
+                    var parent = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, parentId);
                     if (parent != null)
                     {
                         var childrenList = parent.ChildrenIds?.ToList() ?? new List<string>();
                         if (childrenList.Remove(childId))
                         {
-                            parent.ChildrenIds = childrenList.ToArray();
+                            parent.ChildrenIds = childrenList;
                             parent.ModifiedOn = DateTime.UtcNow;
-                            await _ipNodeRepository.UpdateAsync(parent);
+                            await _ipAllocationRepository.UpdateAsync(parent);
                         }
                     }
                     return;

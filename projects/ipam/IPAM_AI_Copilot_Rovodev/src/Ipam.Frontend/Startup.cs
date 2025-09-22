@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Ipam.DataAccess;
+using Ipam.DataAccess.Services;
+using Ipam.ServiceContract.Interfaces;
 
 namespace Ipam.Frontend
 {
@@ -32,6 +34,11 @@ namespace Ipam.Frontend
                 options.EnableCaching = true;
                 options.CacheDuration = TimeSpan.FromMinutes(5);
             });
+
+            // Register individual service interfaces for dependency injection
+            services.AddScoped<IAddressSpaceService, AddressSpaceService>();
+            services.AddScoped<IIpAllocationService, IpAllocationServiceImpl>();
+            services.AddScoped<ITagService, TagServiceImpl>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

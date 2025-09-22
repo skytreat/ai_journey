@@ -1,10 +1,6 @@
-using System;
-using System.Linq;
-using System.Net;
 using System.Numerics;
-using System.Net.Sockets;
 
-namespace Ipam.DataAccess.Models
+namespace Ipam.ServiceContract.Models
 {
     /// <summary>
     /// Represents an IP prefix in CIDR notation
@@ -59,18 +55,31 @@ namespace Ipam.DataAccess.Models
         public bool IsSubnetOf(Prefix other) => 
             other.PrefixLength < PrefixLength && other.Contains(this);
 
-        public Prefix[] GetSubnets()
+        public List<Prefix> GetSubnets(int newPrefixLength = -1)
         {
-            if (PrefixLength >= _maxPrefixLength)
-                throw new InvalidOperationException("Cannot subdivide a /32 IPv4 or /128 IPv6 network");
+            if(newPrefixLength == -1)
+                newPrefixLength = PrefixLength + 1;
+                
+            if (IsIPv4 && newPrefixLength > 32)
+                throw new ArgumentException($"New prefix length must be less than or equal to 32 for IPv4");
+            if (!IsIPv4 && newPrefixLength > 128)
+                throw new ArgumentException($"New prefix length must be less than or equal to 128 for IPv6");
+            
+            if (newPrefixLength <= PrefixLength || newPrefixLength > _maxPrefixLength)
+                throw new ArgumentException($"New prefix length must be greater than current ({PrefixLength}) and less than or equal to {_maxPrefixLength}");
 
             // Calculate the network address for the current prefix
             var networkAddress = _numericValue & _mask;
-            var mask = BigInteger.One << (_maxPrefixLength - (PrefixLength + 1));
-            var subnet1 = new Prefix($"{ToIPAddress(networkAddress)}/{PrefixLength + 1}");
-            var subnet2 = new Prefix($"{ToIPAddress(networkAddress + mask)}/{PrefixLength + 1}");
+            var subnetCount = 1 << (newPrefixLength - PrefixLength);
+            var subnets = new List<Prefix>(subnetCount);
+            
+            var increment = BigInteger.One << (_maxPrefixLength - newPrefixLength);
+            for (int i = 0; i < subnetCount; i++)
+            {
+                subnets.Add(new Prefix($"{ToIPAddress(networkAddress + (increment * i))}/{newPrefixLength}"));
+            }
 
-            return new[] { subnet1, subnet2 };
+            return subnets;
         }
 
         private static BigInteger ToBigInteger(System.Net.IPAddress address)
