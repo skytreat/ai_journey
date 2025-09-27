@@ -30,7 +30,7 @@ namespace Ipam.Frontend.Tests.Middleware
         {
             _loggerMock = new Mock<ILogger<ErrorHandlingMiddleware>>();
             _nextMock = new Mock<RequestDelegate>();
-            _middleware = new ErrorHandlingMiddleware(_nextMock.Object, _loggerMock.Object);
+            _middleware = new ErrorHandlingMiddleware(_nextMock.Object);
         }
 
         [Fact]
@@ -253,7 +253,7 @@ namespace Ipam.Frontend.Tests.Middleware
             // Arrange
             var context = CreateHttpContext();
             var correlationId = Guid.NewGuid().ToString();
-            context.Request.Headers.Add("X-Correlation-ID", correlationId);
+            context.Request.Headers["X-Correlation-ID"] = correlationId;
             
             var exception = new ArgumentException("Test exception");
             _nextMock.Setup(x => x(context)).ThrowsAsync(exception);

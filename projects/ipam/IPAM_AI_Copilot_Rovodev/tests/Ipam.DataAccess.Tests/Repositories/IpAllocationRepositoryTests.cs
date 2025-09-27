@@ -23,20 +23,58 @@ namespace Ipam.DataAccess.Tests.Repositories
     {
         private readonly Mock<IConfiguration> _configMock;
         private readonly MockTableClient _mockTableClient;
-        private readonly IpAllocationRepository _repository;
+        private readonly IpAllocationRepository _ipAllocationRepository;
 
         public IpAllocationRepositoryTests()
         {
             _configMock = new Mock<IConfiguration>();
-            _configMock.Setup(c => c["ConnectionStrings:AzureTableStorage"])
-                       .Returns("UseDevelopmentStorage=true");
+            var connectionStringsSection = new Mock<IConfigurationSection>();
+            connectionStringsSection.Setup(s => s["AzureTableStorage"]).Returns("UseDevelopmentStorage=true");
+            _configMock.Setup(c => c.GetSection("ConnectionStrings")).Returns(connectionStringsSection.Object);
 
             _mockTableClient = new MockTableClient();
-            _repository = new IpAllocationRepository(_configMock.Object);
+            _ipAllocationRepository = new IpAllocationRepository(_configMock.Object);
             
             // Replace the internal table client with our mock
             // Note: This would require making the table client injectable or using a factory pattern
             // For now, we'll test the logic that doesn't depend on Azure Table Storage
+            }
+
+            // Merged from IpNodeRepositoryTests.cs
+            [Fact]
+            public async Task CreateAsync_ValidIpNode_ShouldSucceed_MergedFromIpNodeRepositoryTests()
+            {
+                // Arrange
+                var ipNode = new IpAllocationEntity
+                {
+                    PartitionKey = "space1",
+                    RowKey = "ip1",
+                    Prefix = "10.0.0.0/8",
+                    Tags = new Dictionary<string, string>
+                    {
+                        { "Environment", "Production" }
+                    }
+                };
+
+                // Act
+                var result = await _ipAllocationRepository.CreateAsync(ipNode);
+
+                // Assert
+                Assert.NotNull(result);
+                Assert.Equal(ipNode.Prefix, result.Prefix);
+            }
+
+            [Theory]
+            [InlineData("invalid")]
+            [InlineData("256.1.2.3/24")]
+            [InlineData("192.168.1.1/33")]
+            public async Task CreateAsync_InvalidCidr_ShouldThrowValidationException_MergedFromIpNodeRepositoryTests(string cidr)
+            {
+                // Arrange
+                var ipNode = new IpAllocationEntity { Prefix = cidr };
+
+                // Act & Assert
+                await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.CreateAsync(ipNode));
         }
 
         #region CreateAsync Tests
@@ -57,7 +95,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act
-            var result = await _repository.CreateAsync(ipAllocation);
+            var result = await _ipAllocationRepository.CreateAsync(ipAllocation);
 
             // Assert
             Assert.NotNull(result);
@@ -70,7 +108,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CreateAsync_NullIpAllocation_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.CreateAsync(null));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _ipAllocationRepository.CreateAsync(null));
         }
 
         [Fact]
@@ -85,7 +123,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.CreateAsync(ipAllocation));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.CreateAsync(ipAllocation));
         }
 
         [Fact]
@@ -100,7 +138,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.CreateAsync(ipAllocation));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.CreateAsync(ipAllocation));
         }
 
         [Fact]
@@ -115,7 +153,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.CreateAsync(ipAllocation));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.CreateAsync(ipAllocation));
         }
 
         #endregion
@@ -137,10 +175,10 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // First create the entity
-            await _repository.CreateAsync(expectedEntity);
+            await _ipAllocationRepository.CreateAsync(expectedEntity);
 
             // Act
-            var result = await _repository.GetByIdAsync(addressSpaceId, ipId);
+            var result = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, ipId);
 
             // Assert
             Assert.NotNull(result);
@@ -157,7 +195,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             var nonExistingId = "non-existing";
 
             // Act
-            var result = await _repository.GetByIdAsync(addressSpaceId, nonExistingId);
+            var result = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, nonExistingId);
 
             // Assert
             Assert.Null(result);
@@ -167,14 +205,14 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task GetByIdAsync_EmptyAddressSpaceId_ShouldThrowArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetByIdAsync("", "ip-001"));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.GetByIdAsync("", "ip-001"));
         }
 
         [Fact]
         public async Task GetByIdAsync_EmptyIpId_ShouldThrowArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetByIdAsync("space1", ""));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.GetByIdAsync("space1", ""));
         }
 
         #endregion
@@ -202,11 +240,11 @@ namespace Ipam.DataAccess.Tests.Repositories
                 Prefix = "10.0.2.0/24", // Different prefix
             };
 
-            await _repository.CreateAsync(allocation1);
-            await _repository.CreateAsync(allocation2);
+            await _ipAllocationRepository.CreateAsync(allocation1);
+            await _ipAllocationRepository.CreateAsync(allocation2);
 
             // Act
-            var result = await _repository.GetByPrefixAsync(addressSpaceId, prefix);
+            var result = await _ipAllocationRepository.GetByPrefixAsync(addressSpaceId, prefix);
 
             // Assert
             Assert.NotNull(result);
@@ -224,7 +262,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             var nonExistingPrefix = "192.168.1.0/24";
 
             // Act
-            var result = await _repository.GetByPrefixAsync(addressSpaceId, nonExistingPrefix);
+            var result = await _ipAllocationRepository.GetByPrefixAsync(addressSpaceId, nonExistingPrefix);
 
             // Assert
             Assert.NotNull(result);
@@ -236,7 +274,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         {
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentException>(() => 
-                _repository.GetByPrefixAsync("space1", "invalid-cidr"));
+                _ipAllocationRepository.GetByPrefixAsync("space1", "invalid-cidr"));
         }
 
         #endregion
@@ -291,12 +329,12 @@ namespace Ipam.DataAccess.Tests.Repositories
                 }
             };
 
-            await _repository.CreateAsync(allocation1);
-            await _repository.CreateAsync(allocation2);
-            await _repository.CreateAsync(allocation3);
+            await _ipAllocationRepository.CreateAsync(allocation1);
+            await _ipAllocationRepository.CreateAsync(allocation2);
+            await _ipAllocationRepository.CreateAsync(allocation3);
 
             // Act
-            var result = await _repository.GetByTagsAsync(addressSpaceId, searchTags);
+            var result = await _ipAllocationRepository.GetByTagsAsync(addressSpaceId, searchTags);
 
             // Assert
             Assert.NotNull(result);
@@ -321,10 +359,10 @@ namespace Ipam.DataAccess.Tests.Repositories
                 Prefix = "10.0.1.0/24"
             };
 
-            await _repository.CreateAsync(allocation1);
+            await _ipAllocationRepository.CreateAsync(allocation1);
 
             // Act
-            var result = await _repository.GetByTagsAsync(addressSpaceId, emptyTags);
+            var result = await _ipAllocationRepository.GetByTagsAsync(addressSpaceId, emptyTags);
 
             // Assert
             Assert.NotNull(result);
@@ -337,7 +375,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         {
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentNullException>(() => 
-                _repository.GetByTagsAsync("space1", null));
+                _ipAllocationRepository.GetByTagsAsync("space1", null));
         }
 
         #endregion
@@ -383,13 +421,13 @@ namespace Ipam.DataAccess.Tests.Repositories
                 ParentId = "other-parent"
             };
 
-            await _repository.CreateAsync(parent);
-            await _repository.CreateAsync(child1);
-            await _repository.CreateAsync(child2);
-            await _repository.CreateAsync(unrelatedChild);
+            await _ipAllocationRepository.CreateAsync(parent);
+            await _ipAllocationRepository.CreateAsync(child1);
+            await _ipAllocationRepository.CreateAsync(child2);
+            await _ipAllocationRepository.CreateAsync(unrelatedChild);
 
             // Act
-            var result = await _repository.GetChildrenAsync(addressSpaceId, parentId);
+            var result = await _ipAllocationRepository.GetChildrenAsync(addressSpaceId, parentId);
 
             // Assert
             Assert.NotNull(result);
@@ -408,7 +446,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             var nonExistingParentId = "non-existing-parent";
 
             // Act
-            var result = await _repository.GetChildrenAsync(addressSpaceId, nonExistingParentId);
+            var result = await _ipAllocationRepository.GetChildrenAsync(addressSpaceId, nonExistingParentId);
 
             // Assert
             Assert.NotNull(result);
@@ -437,11 +475,11 @@ namespace Ipam.DataAccess.Tests.Repositories
                 ParentId = "root-1"
             };
 
-            await _repository.CreateAsync(rootNode);
-            await _repository.CreateAsync(childNode);
+            await _ipAllocationRepository.CreateAsync(rootNode);
+            await _ipAllocationRepository.CreateAsync(childNode);
 
             // Act
-            var result = await _repository.GetChildrenAsync(addressSpaceId, null);
+            var result = await _ipAllocationRepository.GetChildrenAsync(addressSpaceId, null);
 
             // Assert
             Assert.NotNull(result);
@@ -466,7 +504,7 @@ namespace Ipam.DataAccess.Tests.Repositories
                 Tags = new Dictionary<string, string> { { "Environment", "Test" } }
             };
 
-            await _repository.CreateAsync(originalEntity);
+            await _ipAllocationRepository.CreateAsync(originalEntity);
 
             // Modify the entity
             originalEntity.Tags["Environment"] = "Production";
@@ -474,7 +512,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             originalEntity.ModifiedOn = DateTime.UtcNow;
 
             // Act
-            var result = await _repository.UpdateAsync(originalEntity);
+            var result = await _ipAllocationRepository.UpdateAsync(originalEntity);
 
             // Assert
             Assert.NotNull(result);
@@ -486,7 +524,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task UpdateAsync_NullIpAllocation_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.UpdateAsync(null));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _ipAllocationRepository.UpdateAsync(null));
         }
 
         #endregion
@@ -507,13 +545,13 @@ namespace Ipam.DataAccess.Tests.Repositories
                 Prefix = "10.0.1.0/24"
             };
 
-            await _repository.CreateAsync(entity);
+            await _ipAllocationRepository.CreateAsync(entity);
 
             // Act
-            await _repository.DeleteAsync(addressSpaceId, ipId);
+            await _ipAllocationRepository.DeleteAsync(addressSpaceId, ipId);
 
             // Verify deletion
-            var deletedEntity = await _repository.GetByIdAsync(addressSpaceId, ipId);
+            var deletedEntity = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, ipId);
             Assert.Null(deletedEntity);
         }
 
@@ -525,21 +563,21 @@ namespace Ipam.DataAccess.Tests.Repositories
             var nonExistingId = "non-existing";
 
             // Act & Assert - Should not throw
-            await _repository.DeleteAsync(addressSpaceId, nonExistingId);
+            await _ipAllocationRepository.DeleteAsync(addressSpaceId, nonExistingId);
         }
 
         [Fact]
         public async Task DeleteAsync_EmptyAddressSpaceId_ShouldThrowArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteAsync("", "ip-001"));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.DeleteAsync("", "ip-001"));
         }
 
         [Fact]
         public async Task DeleteAsync_EmptyIpId_ShouldThrowArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteAsync("space1", ""));
+            await Assert.ThrowsAsync<ArgumentException>(() => _ipAllocationRepository.DeleteAsync("space1", ""));
         }
 
         #endregion
@@ -564,23 +602,23 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act 1: Create
-            var createdEntity = await _repository.CreateAsync(originalEntity);
+            var createdEntity = await _ipAllocationRepository.CreateAsync(originalEntity);
             Assert.NotNull(createdEntity);
             Assert.Equal(ipId, createdEntity.Id);
 
             // Act 2: Read
-            var retrievedEntity = await _repository.GetByIdAsync(addressSpaceId, ipId);
+            var retrievedEntity = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, ipId);
             Assert.NotNull(retrievedEntity);
             Assert.Equal("Test", retrievedEntity.Tags["Environment"]);
 
             // Act 3: Update
             retrievedEntity.Tags["Environment"] = "Production";
-            var updatedEntity = await _repository.UpdateAsync(retrievedEntity);
+            var updatedEntity = await _ipAllocationRepository.UpdateAsync(retrievedEntity);
             Assert.Equal("Production", updatedEntity.Tags["Environment"]);
 
             // Act 4: Delete
-            await _repository.DeleteAsync(addressSpaceId, ipId);
-            var deletedEntity = await _repository.GetByIdAsync(addressSpaceId, ipId);
+            await _ipAllocationRepository.DeleteAsync(addressSpaceId, ipId);
+            var deletedEntity = await _ipAllocationRepository.GetByIdAsync(addressSpaceId, ipId);
             Assert.Null(deletedEntity);
         }
 

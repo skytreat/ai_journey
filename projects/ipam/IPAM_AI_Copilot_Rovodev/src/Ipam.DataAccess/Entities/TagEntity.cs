@@ -15,12 +15,12 @@ namespace Ipam.DataAccess.Entities
         /// <summary>
         /// Gets or sets the partition key (AddressSpaceId)
         /// </summary>
-        public string PartitionKey { get; set; }
+        public string PartitionKey { get; set; } = string.Empty;
         
         /// <summary>
         /// Gets or sets the row key (TagName)
         /// </summary>
-        public string RowKey { get; set; }
+        public string RowKey { get; set; } = string.Empty;
         
         public DateTimeOffset? Timestamp { get; set; }
         public ETag ETag { get; set; }
@@ -43,12 +43,12 @@ namespace Ipam.DataAccess.Entities
             set => RowKey = value; 
         }
 
-        public string Description { get; set; }
-        public string Type { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
         public DateTime ModifiedOn { get; set; }
 
-        private string _knownValues;
+        private string _knownValues = string.Empty;
         public List<string> KnownValues
         {
             get => string.IsNullOrEmpty(_knownValues) ? new List<string>() : 
@@ -56,7 +56,7 @@ namespace Ipam.DataAccess.Entities
             set => _knownValues = JsonSerializer.Serialize(value);
         }
 
-        private string _implies;
+        private string _implies = string.Empty;
         
         /// <summary>
         /// Gets or sets the tag implications
@@ -80,7 +80,7 @@ namespace Ipam.DataAccess.Entities
             set => _implies = JsonSerializer.Serialize(value);
         }
 
-        private string _attributes;
+        private string _attributes = string.Empty;
         
         /// <summary>
         /// Gets or sets additional attributes for the tag

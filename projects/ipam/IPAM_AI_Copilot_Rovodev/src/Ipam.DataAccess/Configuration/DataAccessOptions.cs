@@ -11,7 +11,7 @@ namespace Ipam.DataAccess.Configuration
     /// </remarks>
     public class DataAccessOptions
     {
-        public string ConnectionString { get; set; }
+        public required string ConnectionString { get; set; }
         public bool EnableCaching { get; set; }
         public TimeSpan CacheDuration { get; set; } = TimeSpan.FromMinutes(5);
         public int MaxRetryAttempts { get; set; } = 3;

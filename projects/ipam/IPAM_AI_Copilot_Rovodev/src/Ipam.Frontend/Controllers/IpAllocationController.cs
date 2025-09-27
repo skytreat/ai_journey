@@ -135,8 +135,16 @@ namespace Ipam.Frontend.Controllers
             if (string.IsNullOrEmpty(prefix))
                 return BadRequest("Prefix parameter is required.");
 
-            var ipAllocations = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
-            return Ok(ipAllocations);
+            try
+            {
+                var prefixObj = new ServiceContract.Models.Prefix(prefix);
+                var ipAllocations = await _ipAllocationService.GetIpAllocationsByPrefixAsync(addressSpaceId, prefixObj, CancellationToken.None);
+                return Ok(ipAllocations);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest($"Invalid prefix format: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -149,8 +157,15 @@ namespace Ipam.Frontend.Controllers
             if (tags == null || !tags.Any())
                 return BadRequest("At least one tag must be specified.");
 
-            var ipAllocations = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
-            return Ok(ipAllocations);
+            try
+            {
+                var ipAllocations = await _ipAllocationService.GetIpAllocationsByTagsAsync(addressSpaceId, tags, CancellationToken.None);
+                return Ok(ipAllocations);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error retrieving IP allocations by tags: {ex.Message}");
+            }
         }
 
         /// <summary>

@@ -21,6 +21,6 @@ public interface IIpAllocationService
     // Advanced IP allocation operations
     Task<List<string>> FindAvailableSubnetsAsync(string addressSpaceId, string parentCidr, int subnetSize, int count = 1, CancellationToken cancellationToken = default);
     Task<IpUtilizationStats> CalculateUtilizationAsync(string addressSpaceId, string networkCidr, CancellationToken cancellationToken = default);
-    Task<IpAllocation> AllocateNextSubnetAsync(string addressSpaceId, string parentCidr, int subnetSize, Dictionary<string, string> tags = null, CancellationToken cancellationToken = default);
+    Task<IpAllocation> AllocateNextSubnetAsync(string addressSpaceId, string parentCidr, int subnetSize, Dictionary<string, string>? tags = null, CancellationToken cancellationToken = default);
     Task<SubnetValidationResult> ValidateSubnetAllocationAsync(string addressSpaceId, string proposedCidr, CancellationToken cancellationToken = default);
 }

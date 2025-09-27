@@ -15,12 +15,12 @@ namespace Ipam.DataAccess.Entities
         /// <summary>
         /// Gets or sets the partition key (AddressSpaceId)
         /// </summary>
-        public string PartitionKey { get; set; }
+        public string PartitionKey { get; set; } = string.Empty;
         
         /// <summary>
         /// Gets or sets the row key (IpId)
         /// </summary>
-        public string RowKey { get; set; }
+        public string RowKey { get; set; } = string.Empty;
         
         public DateTimeOffset? Timestamp { get; set; }
         public ETag ETag { get; set; }
@@ -43,22 +43,22 @@ namespace Ipam.DataAccess.Entities
             set => PartitionKey = value; 
         }
 
-        public string Prefix { get; set; }
-        public string ParentId { get; set; }
-        private string _childrenIds;
+        public string Prefix { get; set; } = string.Empty;
+        public string? ParentId { get; set; }
+        private string _childrenIds = string.Empty;
         public List<string> ChildrenIds
         {
             get => string.IsNullOrEmpty(_childrenIds) ? new List<string>() : 
-                JsonSerializer.Deserialize<List<string>>(_childrenIds);
-            set => _childrenIds = JsonSerializer.Serialize(value);
+                JsonSerializer.Deserialize<List<string>>(_childrenIds) ?? new List<string>();
+            set => _childrenIds = JsonSerializer.Serialize(value ?? throw new ArgumentNullException(nameof(value)));
         }
 
-        private string _tags;
+        private string _tags = string.Empty;
         public Dictionary<string, string> Tags
         {
             get => string.IsNullOrEmpty(_tags) ? new Dictionary<string, string>() : 
-                JsonSerializer.Deserialize<Dictionary<string, string>>(_tags);
-            set => _tags = JsonSerializer.Serialize(value);
+                JsonSerializer.Deserialize<Dictionary<string, string>>(_tags) ?? new Dictionary<string, string>();
+            set => _tags = JsonSerializer.Serialize(value ?? throw new ArgumentNullException(nameof(value)));
         }
 
         public DateTime CreatedOn { get; set; }

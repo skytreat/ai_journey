@@ -145,11 +145,13 @@ namespace Ipam.DataAccess.Tests.Entities
         {
             // Arrange
             var entity = new TagEntity();
+            var knownValues = new List<string>();
 
             // Act
-            entity.KnownValues.Add("Production");
-            entity.KnownValues.Add("Staging");
-            entity.KnownValues.Add("Development");
+            knownValues.Add("Production");
+            knownValues.Add("Staging");
+            knownValues.Add("Development");
+            entity.KnownValues = knownValues;
 
             // Assert
             Assert.Equal(3, entity.KnownValues.Count);
@@ -163,11 +165,13 @@ namespace Ipam.DataAccess.Tests.Entities
         {
             // Arrange
             var entity = new TagEntity();
-            entity.KnownValues.Add("Production");
-            entity.KnownValues.Add("Staging");
+            var knownValues = new List<string> { "Production", "Staging" };
+            entity.KnownValues = knownValues;
 
             // Act
-            entity.KnownValues.Remove("Staging");
+            var currentValues = entity.KnownValues;
+            currentValues.Remove("Staging");
+            entity.KnownValues = currentValues;
 
             // Assert
             Assert.Single(entity.KnownValues);
@@ -200,10 +204,10 @@ namespace Ipam.DataAccess.Tests.Entities
         {
             // Arrange
             var entity = new TagEntity();
+            var knownValues = new List<string> { "Production", "Production" }; // Duplicate
 
             // Act
-            entity.KnownValues.Add("Production");
-            entity.KnownValues.Add("Production"); // Duplicate
+            entity.KnownValues = knownValues;
 
             // Assert
             Assert.Equal(2, entity.KnownValues.Count); // List allows duplicates
@@ -220,10 +224,12 @@ namespace Ipam.DataAccess.Tests.Entities
         {
             // Arrange
             var entity = new TagEntity();
+            var implies = new Dictionary<string, Dictionary<string, string>>();
 
             // Act
-            entity.Implies.Add("Backup", new Dictionary<string, string> { { "Value", "Required" } });
-            entity.Implies.Add("Monitoring", new Dictionary<string, string> { { "Value", "Enabled" } });
+            implies.Add("Backup", new Dictionary<string, string> { { "Value", "Required" } });
+            implies.Add("Monitoring", new Dictionary<string, string> { { "Value", "Enabled" } });
+            entity.Implies = implies;
 
             // Assert
             Assert.Equal(2, entity.Implies.Count);
@@ -580,10 +586,18 @@ namespace Ipam.DataAccess.Tests.Entities
             // Act
             entity.Name = "Special-Tag_123";
             entity.Description = "Description with special chars: !@#$%^&*()";
-            entity.KnownValues.Add("Value with spaces & symbols!");
-            entity.KnownValues.Add("Ünïcødé Vålüé");
-            entity.Implies.Add("Special-Key", new Dictionary<string, string> { { "Value", "Special-Value with symbols!" } });
-            entity.Attributes.Add("Unicode-Attr", new Dictionary<string, string> { { "Value", "Ünïcødé Åttrïbütë" } });
+            var knownValues = new List<string> { "Value with spaces & symbols!", "Ünïcødé Vålüé" };
+            entity.KnownValues = knownValues;
+            var implies = new Dictionary<string, Dictionary<string, string>>
+            {
+                { "Special-Key", new Dictionary<string, string> { { "Value", "Special-Value with symbols!" } } }
+            };
+            entity.Implies = implies;
+            var attributes = new Dictionary<string, Dictionary<string, string>>
+            {
+                { "Unicode-Attr", new Dictionary<string, string> { { "Value", "Ünïcødé Åttrïbütë" } } }
+            };
+            entity.Attributes = attributes;
 
             // Assert
             Assert.Equal("Special-Tag_123", entity.Name);
@@ -641,12 +655,14 @@ namespace Ipam.DataAccess.Tests.Entities
         {
             // Arrange
             var entity = new TagEntity();
+            var knownValues = new List<string>();
 
             // Act
             entity.Type = "Enumerated";
-            entity.KnownValues.Add("Option1");
-            entity.KnownValues.Add("Option2");
-            entity.KnownValues.Add("Option3");
+            knownValues.Add("Option1");
+            knownValues.Add("Option2");
+            knownValues.Add("Option3");
+            entity.KnownValues = knownValues;
 
             // Assert
             Assert.Equal("Enumerated", entity.Type);

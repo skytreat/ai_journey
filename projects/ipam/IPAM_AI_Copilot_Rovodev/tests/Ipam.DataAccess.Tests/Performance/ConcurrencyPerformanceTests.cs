@@ -22,7 +22,8 @@ namespace Ipam.DataAccess.Tests.Performance
     public class ConcurrencyPerformanceTests
     {
         private Mock<IIpAllocationRepository> _mockRepository;
-        private Mock<TagInheritanceService> _mockTagService;
+        private Mock<ITagRepository> _mockTagRepository;
+        private TagInheritanceService _tagService;
         private Mock<IMapper> _mockMapper;
         private Mock<ILogger<IpAllocationServiceImpl>> _mockLogger;
         private Mock<PerformanceMonitoringService> _mockPerformanceService;
@@ -39,14 +40,15 @@ namespace Ipam.DataAccess.Tests.Performance
         private void Setup()
         {
             _mockRepository = new Mock<IIpAllocationRepository>();
-            _mockTagService = new Mock<TagInheritanceService>();
+            _mockTagRepository = new Mock<ITagRepository>();
+            _tagService = new TagInheritanceService(_mockTagRepository.Object);
             _mockMapper = new Mock<IMapper>();
             _mockLogger = new Mock<ILogger<IpAllocationServiceImpl>>();
             _mockPerformanceService = new Mock<PerformanceMonitoringService>();
 
             _concurrentService = new ConcurrentIpTreeService(
                 _mockRepository.Object,
-                _mockTagService.Object);
+                _tagService);
 
             _ipAllocationService = new IpAllocationServiceImpl(
                 _mockRepository.Object,
@@ -61,8 +63,8 @@ namespace Ipam.DataAccess.Tests.Performance
 
         private void SetupCommonMocks()
         {
-            _mockTagService.Setup(t => t.ApplyTagImplications(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
-                .ReturnsAsync(new Dictionary<string, string>());
+            _mockTagRepository.Setup(t => t.GetByNameAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((TagEntity?)null);
 
             _mockMapper.Setup(m => m.Map<IpAllocation>(It.IsAny<IpAllocationEntity>()))
                 .Returns<IpAllocationEntity>(e => new IpAllocation
@@ -484,7 +486,8 @@ namespace Ipam.DataAccess.Tests.Performance
         private static ConcurrentIpTreeService CreateMockedService()
         {
             var ipNodeRepositoryMock = new Mock<IIpAllocationRepository>();
-            var tagInheritanceServiceMock = new Mock<TagInheritanceService>(new Mock<ITagRepository>().Object);
+            var tagRepositoryMock = new Mock<ITagRepository>();
+            var tagInheritanceService = new TagInheritanceService(tagRepositoryMock.Object);
 
             // Setup fast, successful operations
             ipNodeRepositoryMock.Setup(x => x.GetByPrefixAsync(It.IsAny<string>(), It.IsAny<string>()))
@@ -497,13 +500,10 @@ namespace Ipam.DataAccess.Tests.Performance
                 .ReturnsAsync(new List<IpAllocationEntity>());
 
             ipNodeRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((IpAllocationEntity)null); // Simulate entity not found for creation scenarios
+                .ReturnsAsync((IpAllocationEntity?)null); // Simulate entity not found for creation scenarios
 
-            tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
-                .ReturnsAsync((string _, Dictionary<string, string> tags) => tags ?? new Dictionary<string, string>());
-
-            tagInheritanceServiceMock.Setup(x => x.ValidateTagInheritance(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<Dictionary<string, string>>()))
-                .Returns(Task.CompletedTask);
+            tagRepositoryMock.Setup(x => x.GetByNameAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((TagEntity?)null);
 
             ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
                 .ReturnsAsync((IpAllocationEntity node) => 
@@ -515,13 +515,14 @@ namespace Ipam.DataAccess.Tests.Performance
 
             return new ConcurrentIpTreeService(
                 ipNodeRepositoryMock.Object,
-                tagInheritanceServiceMock.Object);
+                tagInheritanceService);
         }
 
         private static ConcurrentIpTreeService CreateMockedServiceWithDelay(TimeSpan delay)
         {
             var ipNodeRepositoryMock = new Mock<IIpAllocationRepository>();
-            var tagInheritanceServiceMock = new Mock<TagInheritanceService>(new Mock<ITagRepository>().Object);
+            var tagRepositoryMock = new Mock<ITagRepository>();
+            var tagInheritanceService = new TagInheritanceService(tagRepositoryMock.Object);
 
             ipNodeRepositoryMock.Setup(x => x.GetByPrefixAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(new List<IpAllocationEntity>());
@@ -533,13 +534,10 @@ namespace Ipam.DataAccess.Tests.Performance
                 .ReturnsAsync(new List<IpAllocationEntity>());
 
             ipNodeRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((IpAllocationEntity)null);
+                .ReturnsAsync((IpAllocationEntity?)null);
 
-            tagInheritanceServiceMock.Setup(x => x.ApplyTagImplications(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
-                .ReturnsAsync((string _, Dictionary<string, string> tags) => tags ?? new Dictionary<string, string>());
-
-            tagInheritanceServiceMock.Setup(x => x.ValidateTagInheritance(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<Dictionary<string, string>>()))
-                .Returns(Task.CompletedTask);
+            tagRepositoryMock.Setup(x => x.GetByNameAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((TagEntity?)null);
 
             // Add delay to simulate long-running operation
             ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
@@ -551,7 +549,7 @@ namespace Ipam.DataAccess.Tests.Performance
 
             return new ConcurrentIpTreeService(
                 ipNodeRepositoryMock.Object,
-                tagInheritanceServiceMock.Object);
+                tagInheritanceService);
         }
         #endregion
     }

@@ -40,7 +40,7 @@ namespace Ipam.Frontend.Models
         /// <summary>
         /// Gets or sets the known values for the tag (optional)
         /// </summary>
-        public string[]? KnownValues { get; set; }
+        public List<string> KnownValues { get; set; }
 
         /// <summary>
         /// Gets or sets the tag implications (for inheritable tags)

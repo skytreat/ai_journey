@@ -59,8 +59,8 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_AllServicesHealthy_ReturnsOkWithHealthyStatus()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>());
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpace>());
 
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
                 .Returns(new Dictionary<string, PerformanceStatistics>
@@ -84,7 +84,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_DatabaseUnhealthy_ReturnsDegradedStatus()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
                 .ThrowsAsync(new Exception("Database connection failed"));
 
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
@@ -106,8 +106,8 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_PerformanceDegraded_ReturnsDegradedStatus()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>());
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpace>());
 
             // Setup performance metrics with high response times
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
@@ -128,7 +128,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_ExceptionThrown_ReturnsInternalServerError()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
                 .ThrowsAsync(new Exception("Unexpected error"));
 
             // Act
@@ -183,10 +183,10 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetReadiness_DatabaseAccessible_ReturnsOkWithReadyStatus()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpace>
                 {
-                    new Ipam.ServiceContract.DTOs.AddressSpaceDto { Id = "test" }
+                    new Ipam.ServiceContract.DTOs.AddressSpace { Id = "test" }
                 });
 
             // Act
@@ -205,7 +205,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetReadiness_DatabaseInaccessible_ReturnsServiceUnavailable()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
                 .ThrowsAsync(new Exception("Database unavailable"));
 
             // Act
@@ -239,8 +239,8 @@ namespace Ipam.Frontend.Tests.Controllers
         public async Task GetDetailedHealth_MemoryPressureHigh_ReturnsDegradedStatus()
         {
             // Arrange
-            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync())
-                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpaceDto>());
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpacesAsync(CancellationToken.None))
+                .ReturnsAsync(new List<Ipam.ServiceContract.DTOs.AddressSpace>());
 
             _performanceServiceMock.Setup(x => x.GetAllStatistics())
                 .Returns(new Dictionary<string, PerformanceStatistics>

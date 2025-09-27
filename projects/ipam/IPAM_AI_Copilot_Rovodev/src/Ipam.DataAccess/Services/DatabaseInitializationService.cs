@@ -45,7 +45,9 @@ namespace Ipam.DataAccess.Services
                 PartitionKey = "system",
                 RowKey = "ipv6_root",
                 Prefix = "::/0",
-                Tags = new Dictionary<string, string> { { "Type", "Root" } }
+                Tags = new Dictionary<string, string> { { "Type", "Root" } },
+                CreatedOn = DateTime.UtcNow,
+                ModifiedOn = DateTime.UtcNow
             };
 
             var rootIpv4 = new IpAllocationEntity
@@ -54,7 +56,9 @@ namespace Ipam.DataAccess.Services
                 RowKey = "ipv4_root",
                 Prefix = "0.0.0.0/0",
                 ParentId = "ipv6_root",
-                Tags = new Dictionary<string, string> { { "Type", "Root" } }
+                Tags = new Dictionary<string, string> { { "Type", "Root" } },
+                CreatedOn = DateTime.UtcNow,
+                ModifiedOn = DateTime.UtcNow
             };
 
             try

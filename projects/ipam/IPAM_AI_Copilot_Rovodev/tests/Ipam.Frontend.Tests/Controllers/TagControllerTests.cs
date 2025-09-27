@@ -57,7 +57,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Description = "Environment classification"
             };
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync(expectedTag);
 
             // Act
@@ -77,7 +77,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var addressSpaceId = "space1";
             var tagName = "NonExistent";
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync((Tag)null);
 
             // Act
@@ -99,7 +99,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 new Tag { Name = "Region", Type = "Inheritable" }
             };
 
-            _tagServiceMock.Setup(x => x.GetTagsAsync(addressSpaceId))
+            _tagServiceMock.Setup(x => x.GetTagsAsync(addressSpaceId, CancellationToken.None))
                 .ReturnsAsync(expectedTags);
 
             // Act
@@ -122,7 +122,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Name = "Environment",
                 Type = "Inheritable",
                 Description = "Environment classification",
-                KnownValues = new[] { "Production", "Development", "Testing" }
+                KnownValues = new List<string> { "Production", "Development", "Testing" }
             };
 
             var createdTag = new Tag
@@ -135,7 +135,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 CreatedOn = DateTime.UtcNow
             };
 
-            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId)))
+            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId), CancellationToken.None))
                 .ReturnsAsync(createdTag);
 
             // Act
@@ -156,7 +156,7 @@ namespace Ipam.Frontend.Tests.Controllers
         {
             // Arrange
             var addressSpaceId = "space1";
-            var model = new TagUpdateModel(); // Invalid - missing required fields
+            var model = new TagCreateModel(); // Invalid - missing required fields
             
             _controller.ModelState.AddModelError("Name", "Name is required");
 
@@ -213,7 +213,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Implies = model.Implies
             };
 
-            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId)))
+            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId), CancellationToken.None))
                 .ReturnsAsync(createdTag);
 
             // Act
@@ -236,7 +236,7 @@ namespace Ipam.Frontend.Tests.Controllers
             {
                 Description = "Updated description",
                 Type = "Inheritable",
-                KnownValues = new[] { "Production", "Development", "Testing", "Staging" }
+                KnownValues = new List<string> { "Production", "Development", "Testing", "Staging" }
             };
 
             var existingTag = new Tag
@@ -258,19 +258,25 @@ namespace Ipam.Frontend.Tests.Controllers
                 ModifiedOn = DateTime.UtcNow
             };
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync(existingTag);
-            _tagServiceMock.Setup(x => x.UpdateTagAsync(It.Is<Tag>(t => t.Name == tagName && t.AddressSpaceId == addressSpaceId)))
+            _tagServiceMock.Setup(x => x.UpdateTagAsync(It.Is<Tag>(t => t.Name == tagName && t.AddressSpaceId == addressSpaceId), CancellationToken.None))
                 .ReturnsAsync(updatedTag);
 
             // Act
-            var result = await _controller.Update(addressSpaceId, tagName, model);
+            var updateModel = new TagUpdateModel 
+            { 
+                Type = model.Type,
+                Description = model.Description,
+                KnownValues = model.KnownValues
+            };
+            var result = await _controller.Update(addressSpaceId, tagName, updateModel);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             var tag = Assert.IsType<Tag>(okResult.Value);
             Assert.Equal(model.Description, tag.Description);
-            Assert.Equal(4, tag.KnownValues.Length);
+            Assert.Equal(4, tag.KnownValues.Count);
         }
 
         [Fact]
@@ -284,7 +290,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Type = "Inheritable"
             };
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync((Tag)null);
 
             // Act
@@ -306,7 +312,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Name = tagName
             };
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync(existingTag);
 
             // Act
@@ -314,7 +320,7 @@ namespace Ipam.Frontend.Tests.Controllers
 
             // Assert
             Assert.IsType<NoContentResult>(result);
-            _tagServiceMock.Verify(x => x.DeleteTagAsync(addressSpaceId, tagName), Times.Once);
+            _tagServiceMock.Verify(x => x.DeleteTagAsync(addressSpaceId, tagName, CancellationToken.None), Times.Once);
         }
 
         [Fact]
@@ -324,7 +330,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var addressSpaceId = "space1";
             var tagName = "NonExistent";
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync((Tag)null);
 
             // Act
@@ -332,7 +338,7 @@ namespace Ipam.Frontend.Tests.Controllers
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
-            _tagServiceMock.Verify(x => x.DeleteTagAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _tagServiceMock.Verify(x => x.DeleteTagAsync(It.IsAny<string>(), It.IsAny<string>(), CancellationToken.None), Times.Never);
         }
 
         [Theory]
@@ -357,7 +363,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Type = model.Type
             };
 
-            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId)))
+            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId), CancellationToken.None))
                 .ReturnsAsync(createdTag);
 
             // Act
@@ -393,7 +399,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Attributes = model.Attributes
             };
 
-            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId)))
+            _tagServiceMock.Setup(x => x.CreateTagAsync(It.Is<Tag>(t => t.Name == model.Name && t.AddressSpaceId == addressSpaceId), CancellationToken.None))
                 .ReturnsAsync(createdTag);
 
             // Act
@@ -415,7 +421,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var addressSpaceId = "empty-space";
             var emptyTags = new List<Tag>();
 
-            _tagServiceMock.Setup(x => x.GetTagsAsync(addressSpaceId))
+            _tagServiceMock.Setup(x => x.GetTagsAsync(addressSpaceId, CancellationToken.None))
                 .ReturnsAsync(emptyTags);
 
             // Act
@@ -447,12 +453,12 @@ namespace Ipam.Frontend.Tests.Controllers
                 ModifiedOn = DateTime.UtcNow.AddDays(-1)
             };
 
-            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName))
+            _tagServiceMock.Setup(x => x.GetTagAsync(addressSpaceId, tagName, CancellationToken.None))
                 .ReturnsAsync(existingTag);
 
             // Capture the tag passed to UpdateTagAsync to verify ModifiedOn is set
             Tag capturedTag = null;
-            _tagServiceMock.Setup(x => x.UpdateTagAsync(It.IsAny<Tag>()))
+            _tagServiceMock.Setup(x => x.UpdateTagAsync(It.IsAny<Tag>(), CancellationToken.None))
                 .Callback<Tag>(tag => capturedTag = tag)
                 .ReturnsAsync(existingTag);
 

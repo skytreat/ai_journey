@@ -10,7 +10,7 @@ namespace Ipam.DataAccess.Tests.Repositories
 {
     public class TagRepositoryTests
     {
-        private readonly TagRepository _repository;
+        private readonly TagRepository _tagRepository;
 
         public TagRepositoryTests()
         {
@@ -18,7 +18,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             configMock.Setup(c => c["ConnectionStrings:AzureTableStorage"])
                        .Returns("UseDevelopmentStorage=true");
             
-            _repository = new TagRepository(configMock.Object);
+            _tagRepository = new TagRepository(configMock.Object);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act
-            var result = await _repository.CreateAsync(tag);
+            var result = await _tagRepository.CreateAsync(tag);
 
             // Assert
             Assert.NotNull(result);
@@ -72,7 +72,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.CreateAsync(tag));
+            await Assert.ThrowsAsync<ArgumentException>(() => _tagRepository.CreateAsync(tag));
         }
     }
 }

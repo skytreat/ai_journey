@@ -84,7 +84,7 @@ namespace Ipam.DataAccess.Repositories
                 var parent = await FindClosestParentByPrefix(ipNode.PartitionKey, ipNode.Prefix);
                 if (parent != null)
                 {
-                    ipNode.ParentId = parent.RowKey;
+                    ipNode.ParentId = parent.Id;
                     IpamValidator.ValidateTagInheritance(parent.Tags, ipNode.Tags);
                 }
 

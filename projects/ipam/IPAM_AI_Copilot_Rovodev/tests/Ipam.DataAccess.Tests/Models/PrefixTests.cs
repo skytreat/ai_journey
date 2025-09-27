@@ -100,7 +100,7 @@ namespace Ipam.DataAccess.Tests.Models
         }
 
         [Theory]
-        [InlineData("10.0.0.0/8", "192.168.1.0/24", true)]
+        [InlineData("192.168.0.0/16", "192.168.1.0/24", true)]
         [InlineData("192.168.1.0/24", "192.168.1.128/25", true)]
         [InlineData("192.168.1.0/24", "192.168.1.0/25", true)]
         [InlineData("192.168.1.0/25", "192.168.1.0/24", false)]
@@ -211,8 +211,8 @@ namespace Ipam.DataAccess.Tests.Models
 
             // Assert
             Assert.Equal("10.0.0.0/8", prefixes[0].ToString());
-            Assert.Equal("192.168.1.0/25", prefixes[1].ToString());
-            Assert.Equal("192.168.1.0/24", prefixes[2].ToString());
+            Assert.Equal("192.168.1.0/24", prefixes[1].ToString());
+            Assert.Equal("192.168.1.0/25", prefixes[2].ToString());
             Assert.Equal("192.168.2.0/24", prefixes[3].ToString());
         }
 

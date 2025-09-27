@@ -17,12 +17,12 @@ namespace Ipam.DataAccess.Entities
         /// <summary>
         /// Gets or sets the partition key of the entity (PartitionId)
         /// </summary>
-        public string PartitionKey { get; set; }
+        public string PartitionKey { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the row key of the entity (AddressSpaceId)
         /// </summary>
-        public string RowKey { get; set; }
+        public string RowKey { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the unique identifier of the address space
@@ -46,12 +46,12 @@ namespace Ipam.DataAccess.Entities
         /// <summary>
         /// Gets or sets the name of the address space
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the description of the address space
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the creation date of the address space
@@ -66,6 +66,6 @@ namespace Ipam.DataAccess.Entities
         /// <summary>
         /// Gets or sets the status of the address space
         /// </summary>
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 }

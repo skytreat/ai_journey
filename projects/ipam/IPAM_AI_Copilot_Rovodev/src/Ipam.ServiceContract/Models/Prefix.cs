@@ -24,8 +24,23 @@ namespace Ipam.ServiceContract.Models
             if (parts.Length != 2)
                 throw new ArgumentException("Invalid CIDR format", nameof(cidr));
 
-            Address = System.Net.IPAddress.Parse(parts[0]);
-            PrefixLength = int.Parse(parts[1]);
+            try
+            {
+                Address = System.Net.IPAddress.Parse(parts[0]);
+            }
+            catch (FormatException ex)
+            {
+                throw new ArgumentException("Invalid IP address format", nameof(cidr), ex);
+            }
+
+            try
+            {
+                PrefixLength = int.Parse(parts[1]);
+            }
+            catch (FormatException ex)
+            {
+                throw new ArgumentException("Invalid prefix length format", nameof(cidr), ex);
+            }
             IsIPv4 = Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork;
 
             if (IsIPv4 && (PrefixLength < 0 || PrefixLength > 32))
@@ -105,16 +120,16 @@ namespace Ipam.ServiceContract.Models
             return (BigInteger.One << totalBits) - (BigInteger.One << (totalBits - length));
         }
 
-        public bool Equals(Prefix other)
+        public bool Equals(Prefix? other)
         {
             if (other is null) return false;
             return Address.Equals(other.Address) && PrefixLength == other.PrefixLength;
         }
 
-        public override bool Equals(object obj) => 
+        public override bool Equals(object? obj) => 
             obj is Prefix prefix && Equals(prefix);
 
-        public int CompareTo(Prefix other)
+        public int CompareTo(Prefix? other)
         {
             if (other is null) return 1;
             int addressComparison = string.Compare(Address.ToString(), other.Address.ToString(), StringComparison.Ordinal);

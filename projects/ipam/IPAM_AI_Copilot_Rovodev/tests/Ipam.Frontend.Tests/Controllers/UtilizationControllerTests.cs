@@ -3,11 +3,14 @@ using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Ipam.DataAccess.Services;
 using Ipam.Frontend.Controllers;
+using Ipam.ServiceContract.Interfaces;
+using Ipam.ServiceContract.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using Ipam.ServiceContract.DTOs;
 
 namespace Ipam.Frontend.Tests.Controllers
 {
@@ -20,14 +23,14 @@ namespace Ipam.Frontend.Tests.Controllers
     /// </remarks>
     public class UtilizationControllerTests
     {
-        private readonly Mock<IpAllocationService> _allocationServiceMock;
+        private readonly Mock<IIpAllocationService> _allocationServiceMock;
         private readonly Mock<PerformanceMonitoringService> _performanceServiceMock;
         private readonly Mock<AuditService> _auditServiceMock;
         private readonly UtilizationController _controller;
 
         public UtilizationControllerTests()
         {
-            _allocationServiceMock = new Mock<IpAllocationService>();
+            _allocationServiceMock = new Mock<IIpAllocationService>();
             _performanceServiceMock = new Mock<PerformanceMonitoringService>();
             _auditServiceMock = new Mock<AuditService>();
             
@@ -63,7 +66,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 SubnetCount = 2
             };
 
-            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, networkCidr))
+            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, networkCidr, CancellationToken.None))
                 .ReturnsAsync(expectedStats);
 
             // Act
@@ -83,7 +86,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var addressSpaceId = "space1";
             var invalidCidr = "invalid-cidr";
 
-            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, invalidCidr))
+            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, invalidCidr, CancellationToken.None))
                 .ThrowsAsync(new ArgumentException("Invalid CIDR"));
 
             // Act
@@ -107,7 +110,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 "10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24", "10.0.4.0/24", "10.0.5.0/24"
             };
 
-            _allocationServiceMock.Setup(x => x.FindAvailableSubnetsAsync(addressSpaceId, parentCidr, subnetSize, count))
+            _allocationServiceMock.Setup(x => x.FindAvailableSubnetsAsync(addressSpaceId, parentCidr, subnetSize, count, CancellationToken.None))
                 .ReturnsAsync(expectedSubnets);
 
             // Act
@@ -169,7 +172,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 ValidationMessage = "Subnet allocation is valid"
             };
 
-            _allocationServiceMock.Setup(x => x.ValidateSubnetAllocationAsync(addressSpaceId, request.ProposedCidr))
+            _allocationServiceMock.Setup(x => x.ValidateSubnetAllocationAsync(addressSpaceId, request.ProposedCidr, CancellationToken.None))
                 .ReturnsAsync(expectedResult);
 
             // Act
@@ -196,7 +199,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 ValidationMessage = "Subnet conflicts with existing allocations"
             };
 
-            _allocationServiceMock.Setup(x => x.ValidateSubnetAllocationAsync(addressSpaceId, request.ProposedCidr))
+            _allocationServiceMock.Setup(x => x.ValidateSubnetAllocationAsync(addressSpaceId, request.ProposedCidr, CancellationToken.None))
                 .ReturnsAsync(expectedResult);
 
             // Act
@@ -221,14 +224,13 @@ namespace Ipam.Frontend.Tests.Controllers
                 Tags = new Dictionary<string, string> { { "Environment", "Test" } }
             };
 
-            var allocatedNode = new Ipam.DataAccess.Models.IpNode
+            var allocatedNode = new IpAllocation
             {
                 Id = "allocated-id",
-                Prefix = "10.0.1.0/24",
-                Tags = request.Tags
+                Prefix = "10.0.1.0/24"
             };
-
-            _allocationServiceMock.Setup(x => x.AllocateNextSubnetAsync(addressSpaceId, parentCidr, request.SubnetSize, request.Tags))
+            
+            _allocationServiceMock.Setup(x => x.AllocateNextSubnetAsync(addressSpaceId, parentCidr, request.SubnetSize, request.Tags, CancellationToken.None))
                 .ReturnsAsync(allocatedNode);
 
             // Act
@@ -247,7 +249,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var parentCidr = "10.0.0.0/30";
             var request = new SubnetAllocationRequest { SubnetSize = 32 };
 
-            _allocationServiceMock.Setup(x => x.AllocateNextSubnetAsync(addressSpaceId, parentCidr, request.SubnetSize, request.Tags))
+            _allocationServiceMock.Setup(x => x.AllocateNextSubnetAsync(addressSpaceId, parentCidr, request.SubnetSize, request.Tags, CancellationToken.None))
                 .ThrowsAsync(new InvalidOperationException("No available subnets"));
 
             // Act
@@ -266,7 +268,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var parentCidr = "invalid-cidr";
             var request = new SubnetAllocationRequest { SubnetSize = 24 };
 
-            _allocationServiceMock.Setup(x => x.AllocateNextSubnetAsync(addressSpaceId, parentCidr, request.SubnetSize, request.Tags))
+            _allocationServiceMock.Setup(x => x.AllocateNextSubnetAsync(addressSpaceId, parentCidr, request.SubnetSize, request.Tags, CancellationToken.None))
                 .ThrowsAsync(new ArgumentException("Invalid CIDR"));
 
             // Act
@@ -296,9 +298,9 @@ namespace Ipam.Frontend.Tests.Controllers
                 FragmentationIndex = 0.05
             };
 
-            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, "0.0.0.0/0"))
+            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, "0.0.0.0/0", CancellationToken.None))
                 .ReturnsAsync(ipv4Stats);
-            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, "::/0"))
+            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, "::/0", CancellationToken.None))
                 .ReturnsAsync(ipv6Stats);
 
             // Act
@@ -316,7 +318,7 @@ namespace Ipam.Frontend.Tests.Controllers
             // Arrange
             var addressSpaceId = "space1";
 
-            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, "0.0.0.0/0"))
+            _allocationServiceMock.Setup(x => x.CalculateUtilizationAsync(addressSpaceId, "0.0.0.0/0", CancellationToken.None))
                 .ThrowsAsync(new Exception("Service error"));
 
             // Act

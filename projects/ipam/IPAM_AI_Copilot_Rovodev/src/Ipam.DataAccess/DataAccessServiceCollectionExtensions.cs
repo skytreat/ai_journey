@@ -39,6 +39,8 @@ namespace Ipam.DataAccess
             services.AddScoped<TagInheritanceService>();
             services.AddScoped<IpTreeService>();
             services.AddScoped<ConcurrentIpTreeService>();
+            services.AddScoped<OptimizedIpTreeTraversalService>();
+            services.AddScoped<TreeOperationOptimizer>();
             services.AddScoped<AuditService>();
             services.AddSingleton<PerformanceMonitoringService>();
             
@@ -57,17 +59,20 @@ namespace Ipam.DataAccess
             var serviceProvider = services.BuildServiceProvider();
             var options = serviceProvider.GetRequiredService<IOptions<DataAccessOptions>>().Value;
 
+            // Always add memory cache
+            services.AddMemoryCache();
+            
             if (options.EnableCaching)
             {
-                // Register the caching decorator manually since Decorate extension is not available
+                // Replace the existing repository registration with caching decorator
                 services.AddScoped<IIpAllocationRepository>(provider =>
                 {
-                    var baseRepository = new IpAllocationRepository(provider.GetRequiredService<IConfiguration>());
+                    var configuration = provider.GetRequiredService<IConfiguration>();
+                    var baseRepository = new IpAllocationRepository(configuration);
                     var cache = provider.GetRequiredService<IMemoryCache>();
-                    var options = provider.GetRequiredService<IOptions<DataAccessOptions>>();
-                    return new CachingIpNodeRepository(baseRepository, cache, options);
+                    var cachingOptions = provider.GetRequiredService<IOptions<DataAccessOptions>>();
+                    return new CachingIpNodeRepository(baseRepository, cache, cachingOptions);
                 });
-                services.AddMemoryCache();
             }
 
             // Add AutoMapper

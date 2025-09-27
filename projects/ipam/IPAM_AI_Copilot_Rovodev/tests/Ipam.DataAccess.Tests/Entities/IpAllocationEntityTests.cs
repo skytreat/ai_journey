@@ -461,11 +461,11 @@ namespace Ipam.DataAccess.Tests.Entities
         {
             // Arrange
             var entity = new IpAllocationEntity();
-            var manyChildren = new List<string>(50);
+            var manyChildren = new List<string>();
 
             for (int i = 0; i < 50; i++)
             {
-                manyChildren[i] = $"child-{i:D3}";
+                manyChildren.Add($"child-{i:D3}");
             }
 
             // Act
