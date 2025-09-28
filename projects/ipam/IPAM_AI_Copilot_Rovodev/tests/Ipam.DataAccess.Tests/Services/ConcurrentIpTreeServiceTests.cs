@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Ipam.DataAccess.Entities;
+using Ipam.DataAccess.Tests.TestHelpers;
 
 namespace Ipam.DataAccess.Tests.Services
 {
@@ -414,7 +415,7 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task GetAddressSpaceLock_SameAddressSpace_ShouldReturnSameSemaphore()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
 
             // Act
             var lock1 = _ipService.GetAddressSpaceLock(addressSpaceId);
@@ -443,7 +444,7 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task ConcurrentOperations_SameAddressSpace_ShouldBeSerializedBySemaphore()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
             var executionOrder = new List<int>();
             var lockObject = new object();
             
@@ -495,8 +496,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_ETagConflictOnce_ShouldRetrySuccessfully()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var entity = CreateTestEntity(addressSpaceId, ipId, "10.0.1.0/24");
             var ipAllocation = CreateTestIpAllocation(addressSpaceId, ipId, "10.0.1.0/24");
 
@@ -533,8 +534,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_ETagConflictExceedsMaxRetries_ShouldThrowConcurrencyException()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var entity = CreateTestEntity(addressSpaceId, ipId, "10.0.1.0/24");
             var ipAllocation = CreateTestIpAllocation(addressSpaceId, ipId, "10.0.1.0/24");
 
@@ -560,8 +561,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_ExponentialBackoffDelay_ShouldIncreaseDelayBetweenRetries()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var entity = CreateTestEntity(addressSpaceId, ipId, "10.0.1.0/24");
             var ipAllocation = CreateTestIpAllocation(addressSpaceId, ipId, "10.0.1.0/24");
 
@@ -609,8 +610,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_PrefixChangeWithConflict_ShouldThrowException()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var originalEntity = CreateTestEntity(addressSpaceId, ipId, "10.0.1.0/24");
             var conflictingEntity = CreateTestEntity(addressSpaceId, "other-ip", "10.0.2.0/24");
             
@@ -634,8 +635,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_PrefixChangeWithoutConflict_ShouldSucceed()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var originalEntity = CreateTestEntity(addressSpaceId, ipId, "10.0.1.0/24");
             
             var ipAllocation = CreateTestIpAllocation(addressSpaceId, ipId, "10.0.3.0/24"); // No conflict
@@ -668,8 +669,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_ParentRelationshipChange_ShouldUpdateChildrenLists()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var oldParent = CreateTestEntity(addressSpaceId, "old-parent", "10.0.0.0/16");
             oldParent.ChildrenIds = new List<string> { ipId };
             
@@ -726,8 +727,8 @@ namespace Ipam.DataAccess.Tests.Services
         public async Task UpdateIpAllocationAsync_TagInheritanceViolation_ShouldThrowException()
         {
             // Arrange
-            const string addressSpaceId = "test-space";
-            const string ipId = "test-ip";
+            const string addressSpaceId = TestConstants.DefaultAddressSpaceId;
+            const string ipId = TestConstants.DefaultIpId;
             var parentEntity = CreateTestEntity(addressSpaceId, "parent", "10.0.0.0/16");
             var childEntity = CreateTestEntity(addressSpaceId, ipId, "10.0.1.0/24", "parent");
             

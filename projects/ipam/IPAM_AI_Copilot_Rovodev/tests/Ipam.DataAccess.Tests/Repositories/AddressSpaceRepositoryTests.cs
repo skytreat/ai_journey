@@ -3,6 +3,7 @@ using Moq;
 using Microsoft.Extensions.Configuration;
 using Ipam.DataAccess.Repositories;
 using Ipam.DataAccess.Entities;
+using Ipam.DataAccess.Tests.TestHelpers;
 using System.Threading.Tasks;
 
 namespace Ipam.DataAccess.Tests.Repositories
@@ -14,19 +15,16 @@ namespace Ipam.DataAccess.Tests.Repositories
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class AddressSpaceRepositoryTests
+    public class AddressSpaceRepositoryTests : RepositoryTestBase<AddressSpaceRepository, AddressSpaceEntity>
     {
-        private readonly Mock<IConfiguration> _configMock;
-        private readonly AddressSpaceRepository _addressSpaceRepository;
-
-        public AddressSpaceRepositoryTests()
+        protected override AddressSpaceRepository CreateRepository()
         {
-            _configMock = new Mock<IConfiguration>();
-            var connectionStringsSection = new Mock<IConfigurationSection>();
-            connectionStringsSection.Setup(s => s["AzureTableStorage"]).Returns("UseDevelopmentStorage=true");
-            _configMock.Setup(c => c.GetSection("ConnectionStrings")).Returns(connectionStringsSection.Object);
+            return new AddressSpaceRepository(ConfigMock.Object);
+        }
 
-            _addressSpaceRepository = new AddressSpaceRepository(_configMock.Object);
+        protected override AddressSpaceEntity CreateTestEntity()
+        {
+            return TestDataBuilders.CreateTestAddressSpaceEntity();
         }
 
         [Fact]
@@ -46,7 +44,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act
-            var result = await _addressSpaceRepository.CreateAsync(addressSpace);
+            var result = await Repository.CreateAsync(addressSpace);
 
             // Assert
             Assert.NotNull(result);
@@ -59,7 +57,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CreateAsync_NullAddressSpace_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _addressSpaceRepository.CreateAsync(null));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => Repository.CreateAsync(null));
         }
 
         [Fact]
@@ -75,7 +73,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _addressSpaceRepository.CreateAsync(addressSpace));
+            await Assert.ThrowsAsync<ArgumentException>(() => Repository.CreateAsync(addressSpace));
         }
 
         [Fact]
@@ -95,10 +93,10 @@ namespace Ipam.DataAccess.Tests.Repositories
                 Status = "Active"
             };
 
-            await _addressSpaceRepository.CreateAsync(addressSpace);
+            await Repository.CreateAsync(addressSpace);
 
             // Act
-            var result = await _addressSpaceRepository.GetByIdAsync(partitionKey, addressSpaceId);
+            var result = await Repository.GetByIdAsync(partitionKey, addressSpaceId);
 
             // Assert
             Assert.NotNull(result);
@@ -115,7 +113,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             var nonExistingId = "non-existing";
 
             // Act
-            var result = await _addressSpaceRepository.GetByIdAsync(partitionKey, nonExistingId);
+            var result = await Repository.GetByIdAsync(partitionKey, nonExistingId);
 
             // Assert
             Assert.Null(result);
@@ -136,7 +134,7 @@ namespace Ipam.DataAccess.Tests.Repositories
                 CreatedOn = DateTime.UtcNow.AddDays(-1)
             };
 
-            await _addressSpaceRepository.CreateAsync(addressSpace);
+            await Repository.CreateAsync(addressSpace);
 
             // Modify the address space
             addressSpace.Name = "Updated Name";
@@ -144,7 +142,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             addressSpace.ModifiedOn = DateTime.UtcNow;
 
             // Act
-            var result = await _addressSpaceRepository.UpdateAsync(addressSpace);
+            var result = await Repository.UpdateAsync(addressSpace);
 
             // Assert
             Assert.NotNull(result);
@@ -168,13 +166,13 @@ namespace Ipam.DataAccess.Tests.Repositories
                 Name = "Test Space"
             };
 
-            await _addressSpaceRepository.CreateAsync(addressSpace);
+            await Repository.CreateAsync(addressSpace);
 
             // Act
-            await _addressSpaceRepository.DeleteAsync(partitionKey, addressSpaceId);
+            await Repository.DeleteAsync(partitionKey, addressSpaceId);
 
             // Verify deletion
-            var deletedAddressSpace = await _addressSpaceRepository.GetByIdAsync(partitionKey, addressSpaceId);
+            var deletedAddressSpace = await Repository.GetByIdAsync(partitionKey, addressSpaceId);
             Assert.Null(deletedAddressSpace);
         }
 
@@ -204,11 +202,11 @@ namespace Ipam.DataAccess.Tests.Repositories
 
             foreach (var space in addressSpaces)
             {
-                await _addressSpaceRepository.CreateAsync(space);
+                await Repository.CreateAsync(space);
             }
 
             // Act
-            var result = await _addressSpaceRepository.GetAllAsync(partitionKey);
+            var result = await Repository.GetAllAsync(partitionKey);
 
             // Assert
             Assert.NotNull(result);
@@ -242,11 +240,11 @@ namespace Ipam.DataAccess.Tests.Repositories
 
             foreach (var space in addressSpaces)
             {
-                await _addressSpaceRepository.CreateAsync(space);
+                await Repository.CreateAsync(space);
             }
 
             // Act
-            var result = await _addressSpaceRepository.QueryAsync(nameFilter: "Production");
+            var result = await Repository.QueryAsync(nameFilter: "Production");
 
             // Assert
             Assert.NotNull(result);
@@ -279,11 +277,11 @@ namespace Ipam.DataAccess.Tests.Repositories
                 CreatedOn = DateTime.UtcNow
             };
 
-            await _addressSpaceRepository.CreateAsync(oldSpace);
-            await _addressSpaceRepository.CreateAsync(newSpace);
+            await Repository.CreateAsync(oldSpace);
+            await Repository.CreateAsync(newSpace);
 
             // Act
-            var result = await _addressSpaceRepository.QueryAsync(createdAfter: cutoffDate);
+            var result = await Repository.QueryAsync(createdAfter: cutoffDate);
 
             // Assert
             Assert.NotNull(result);

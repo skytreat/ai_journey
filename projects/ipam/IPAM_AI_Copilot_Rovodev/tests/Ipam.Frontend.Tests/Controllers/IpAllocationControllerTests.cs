@@ -6,18 +6,18 @@ using Ipam.ServiceContract.DTOs;
 using Ipam.Frontend.Controllers;
 using Ipam.Frontend.Models;
 using System.Threading.Tasks;
+using Ipam.Frontend.Tests.TestHelpers;
 
 namespace Ipam.Frontend.Tests.Controllers
 {
-    public class IpAllocationControllerTests
+    public class IpAllocationControllerTests : ControllerTestBase<IpAllocationController>
     {
-        private readonly Mock<IIpAllocationService> _ipAllocationServiceMock;
-        private readonly IpAllocationController _controller;
+        private Mock<IIpAllocationService>? _ipAllocationServiceMock;
 
-        public IpAllocationControllerTests()
+        protected override IpAllocationController CreateController()
         {
             _ipAllocationServiceMock = new Mock<IIpAllocationService>();
-            _controller = new IpAllocationController(_ipAllocationServiceMock.Object);
+            return new IpAllocationController(_ipAllocationServiceMock.Object);
         }
 
         [Fact]
@@ -25,11 +25,11 @@ namespace Ipam.Frontend.Tests.Controllers
         {
             // Arrange
             var ipAllocation = new IpAllocation { Id = "ip1", AddressSpaceId = "space1" };
-            _ipAllocationServiceMock.Setup(x => x.GetIpAllocationByIdAsync("space1", "ip1", CancellationToken.None))
+            _ipAllocationServiceMock!.Setup(x => x.GetIpAllocationByIdAsync("space1", "ip1", CancellationToken.None))
                 .ReturnsAsync(ipAllocation);
 
             // Act
-            var result = await _controller.GetById("space1", "ip1");
+            var result = await Controller.GetById("space1", "ip1");
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -46,11 +46,11 @@ namespace Ipam.Frontend.Tests.Controllers
                 Prefix = "10.0.0.0/8"
             };
             var ipAllocation = new IpAllocation { Id = "ip1", AddressSpaceId = "space1", Prefix = "10.0.0.0/8" };
-            _ipAllocationServiceMock.Setup(x => x.CreateIpAllocationAsync(It.Is<IpAllocation>(a => a.AddressSpaceId == "space1" && a.Prefix == "10.0.0.0/8"), CancellationToken.None))
+            _ipAllocationServiceMock!.Setup(x => x.CreateIpAllocationAsync(It.Is<IpAllocation>(a => a.AddressSpaceId == "space1" && a.Prefix == "10.0.0.0/8"), CancellationToken.None))
                 .ReturnsAsync(ipAllocation);
 
             // Act
-            var result = await _controller.Create("space1", model);
+            var result = await Controller.Create("space1", model);
 
             // Assert
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);

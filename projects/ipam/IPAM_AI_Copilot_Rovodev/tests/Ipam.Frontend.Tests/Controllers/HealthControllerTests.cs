@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using Ipam.Frontend.Tests.TestHelpers;
 
 namespace Ipam.Frontend.Tests.Controllers
 {
@@ -21,30 +22,26 @@ namespace Ipam.Frontend.Tests.Controllers
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class HealthControllerTests
+    public class HealthControllerTests : ControllerTestBase<HealthController>
     {
-        private readonly Mock<IAddressSpaceService> _addressSpaceServiceMock;
-        private readonly Mock<IPerformanceMonitoringService> _performanceServiceMock;
-        private readonly Mock<ILogger<HealthController>> _loggerMock;
-        private readonly HealthController _controller;
+        private Mock<IAddressSpaceService> _addressSpaceServiceMock;
+        private Mock<IPerformanceMonitoringService> _performanceServiceMock;
 
-        public HealthControllerTests()
+        protected override HealthController CreateController()
         {
             _addressSpaceServiceMock = new Mock<IAddressSpaceService>();
             _performanceServiceMock = new Mock<IPerformanceMonitoringService>();
-            _loggerMock = new Mock<ILogger<HealthController>>();
-            
-            _controller = new HealthController(
+            return new HealthController(
                 _addressSpaceServiceMock.Object,
                 _performanceServiceMock.Object,
-                _loggerMock.Object);
+                LoggerMock.Object);;
         }
 
         [Fact]
         public void GetHealth_Always_ReturnsOkWithHealthStatus()
         {
             // Act
-            var result = _controller.GetHealth();
+            var result = Controller.GetHealth();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -71,7 +68,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 });
 
             // Act
-            var result = await _controller.GetDetailedHealth();
+            var result = await Controller.GetDetailedHealth();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -93,7 +90,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .Returns(new Dictionary<string, PerformanceStatistics>());
 
             // Act
-            var result = await _controller.GetDetailedHealth();
+            var result = await Controller.GetDetailedHealth();
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);
@@ -119,7 +116,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 });
 
             // Act
-            var result = await _controller.GetDetailedHealth();
+            var result = await Controller.GetDetailedHealth();
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);
@@ -134,7 +131,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ThrowsAsync(new Exception("Unexpected error"));
 
             // Act
-            var result = await _controller.GetDetailedHealth();
+            var result = await Controller.GetDetailedHealth();
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);
@@ -155,7 +152,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .Returns(expectedMetrics);
 
             // Act
-            var result = _controller.GetMetrics();
+            var result = Controller.GetMetrics();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -174,7 +171,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .Throws(new Exception("Metrics service error"));
 
             // Act
-            var result = _controller.GetMetrics();
+            var result = Controller.GetMetrics();
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);
@@ -192,7 +189,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 });
 
             // Act
-            var result = await _controller.GetReadiness();
+            var result = await Controller.GetReadiness();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -211,7 +208,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ThrowsAsync(new Exception("Database unavailable"));
 
             // Act
-            var result = await _controller.GetReadiness();
+            var result = await Controller.GetReadiness();
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);
@@ -226,7 +223,7 @@ namespace Ipam.Frontend.Tests.Controllers
         public void GetLiveness_Always_ReturnsOkWithAliveStatus()
         {
             // Act
-            var result = _controller.GetLiveness();
+            var result = Controller.GetLiveness();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -256,7 +253,7 @@ namespace Ipam.Frontend.Tests.Controllers
             GC.Collect();
 
             // Act
-            var result = await _controller.GetDetailedHealth();
+            var result = await Controller.GetDetailedHealth();
 
             // Assert
             // The result might be healthy or degraded depending on actual memory usage

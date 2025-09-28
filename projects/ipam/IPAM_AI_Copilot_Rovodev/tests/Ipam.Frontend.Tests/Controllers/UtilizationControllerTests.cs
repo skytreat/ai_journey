@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Ipam.ServiceContract.DTOs;
+using Ipam.Frontend.Tests.TestHelpers;
 
 namespace Ipam.Frontend.Tests.Controllers
 {
@@ -22,34 +23,35 @@ namespace Ipam.Frontend.Tests.Controllers
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class UtilizationControllerTests
+    public class UtilizationControllerTests : ControllerTestBase<UtilizationController>
     {
-        private readonly Mock<IIpAllocationService> _allocationServiceMock;
-        private readonly Mock<IPerformanceMonitoringService> _performanceServiceMock;
-        private readonly Mock<IAuditService> _auditServiceMock;
-        private readonly UtilizationController _controller;
+        private Mock<IIpAllocationService> _allocationServiceMock;
+        private Mock<IPerformanceMonitoringService> _performanceServiceMock;
+        private Mock<IAuditService> _auditServiceMock;
 
-        public UtilizationControllerTests()
+        protected override UtilizationController CreateController()
         {
             _allocationServiceMock = new Mock<IIpAllocationService>();
             _performanceServiceMock = new Mock<IPerformanceMonitoringService>();
             _auditServiceMock = new Mock<IAuditService>();
-            
-            _controller = new UtilizationController(
-                _allocationServiceMock.Object,
-                _performanceServiceMock.Object,
-                _auditServiceMock.Object);
+
+            var controller = new UtilizationController(
+               _allocationServiceMock.Object,
+               _performanceServiceMock.Object,
+               _auditServiceMock.Object);
 
             // Setup user context
             var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.Name, "testuser")
             }));
-            
-            _controller.ControllerContext = new ControllerContext
+
+            controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = user }
             };
+
+            return controller;
         }
 
         [Fact]
@@ -71,7 +73,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(expectedStats);
 
             // Act
-            var result = await _controller.GetUtilization(addressSpaceId, networkCidr);
+            var result = await Controller.GetUtilization(addressSpaceId, networkCidr);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -91,7 +93,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ThrowsAsync(new ArgumentException("Invalid CIDR"));
 
             // Act
-            var result = await _controller.GetUtilization(addressSpaceId, invalidCidr);
+            var result = await Controller.GetUtilization(addressSpaceId, invalidCidr);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -115,7 +117,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(expectedSubnets);
 
             // Act
-            var result = await _controller.FindAvailableSubnets(addressSpaceId, parentCidr, subnetSize, count);
+            var result = await Controller.FindAvailableSubnets(addressSpaceId, parentCidr, subnetSize, count);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -135,7 +137,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var count = 5;
 
             // Act
-            var result = await _controller.FindAvailableSubnets(addressSpaceId, parentCidr, invalidSubnetSize, count);
+            var result = await Controller.FindAvailableSubnets(addressSpaceId, parentCidr, invalidSubnetSize, count);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -153,7 +155,7 @@ namespace Ipam.Frontend.Tests.Controllers
             var subnetSize = 24;
 
             // Act
-            var result = await _controller.FindAvailableSubnets(addressSpaceId, parentCidr, subnetSize, invalidCount);
+            var result = await Controller.FindAvailableSubnets(addressSpaceId, parentCidr, subnetSize, invalidCount);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -177,7 +179,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(expectedResult);
 
             // Act
-            var result = await _controller.ValidateSubnetAllocation(addressSpaceId, request);
+            var result = await Controller.ValidateSubnetAllocation(addressSpaceId, request);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -204,7 +206,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(expectedResult);
 
             // Act
-            var result = await _controller.ValidateSubnetAllocation(addressSpaceId, request);
+            var result = await Controller.ValidateSubnetAllocation(addressSpaceId, request);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -235,7 +237,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(allocatedNode);
 
             // Act
-            var result = await _controller.AllocateNextSubnet(addressSpaceId, parentCidr, request);
+            var result = await Controller.AllocateNextSubnet(addressSpaceId, parentCidr, request);
 
             // Assert
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -254,7 +256,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ThrowsAsync(new InvalidOperationException("No available subnets"));
 
             // Act
-            var result = await _controller.AllocateNextSubnet(addressSpaceId, parentCidr, request);
+            var result = await Controller.AllocateNextSubnet(addressSpaceId, parentCidr, request);
 
             // Assert
             var conflictResult = Assert.IsType<ConflictObjectResult>(result);
@@ -273,7 +275,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ThrowsAsync(new ArgumentException("Invalid CIDR"));
 
             // Act
-            var result = await _controller.AllocateNextSubnet(addressSpaceId, parentCidr, request);
+            var result = await Controller.AllocateNextSubnet(addressSpaceId, parentCidr, request);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -305,7 +307,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(ipv6Stats);
 
             // Act
-            var result = await _controller.GetUtilizationReport(addressSpaceId);
+            var result = await Controller.GetUtilizationReport(addressSpaceId);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -323,7 +325,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ThrowsAsync(new Exception("Service error"));
 
             // Act
-            var result = await _controller.GetUtilizationReport(addressSpaceId);
+            var result = await Controller.GetUtilizationReport(addressSpaceId);
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);

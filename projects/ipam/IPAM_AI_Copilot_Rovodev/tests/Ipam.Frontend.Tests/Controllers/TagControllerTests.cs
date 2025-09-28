@@ -5,6 +5,7 @@ using Ipam.ServiceContract.Interfaces;
 using Ipam.ServiceContract.DTOs;
 using Ipam.Frontend.Controllers;
 using Ipam.Frontend.Models;
+using Ipam.Frontend.Tests.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -20,27 +21,27 @@ namespace Ipam.Frontend.Tests.Controllers
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class TagControllerTests
+    public class TagControllerTests : ControllerTestBase<TagController>
     {
-        private readonly Mock<ITagService> _tagServiceMock;
-        private readonly TagController _controller;
+        private Mock<ITagService> _tagServiceMock;
 
-        public TagControllerTests()
+        protected override TagController CreateController()
         {
             _tagServiceMock = new Mock<ITagService>();
-            _controller = new TagController(_tagServiceMock.Object);
-
+            var controller = new TagController(_tagServiceMock.Object);
             // Setup user context for authorization tests
             var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.Name, "testuser"),
                 new Claim(ClaimTypes.Role, "AddressSpaceAdmin")
             }));
-            
-            _controller.ControllerContext = new ControllerContext
+
+            controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = user }
             };
+
+            return controller;
         }
 
         [Fact]
@@ -61,7 +62,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(expectedTag);
 
             // Act
-            var result = await _controller.GetById(addressSpaceId, tagName);
+            var result = await Controller.GetById(addressSpaceId, tagName);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<Tag>>(result);
@@ -82,7 +83,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync((Tag)null);
 
             // Act
-            var result = await _controller.GetById(addressSpaceId, tagName);
+            var result = await Controller.GetById(addressSpaceId, tagName);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<Tag>>(result);
@@ -105,7 +106,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(expectedTags);
 
             // Act
-            var result = await _controller.GetAll(addressSpaceId);
+            var result = await Controller.GetAll(addressSpaceId);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Tag>>>(result);
@@ -142,11 +143,11 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(createdTag);
 
             // Act
-            var result = await _controller.Create(addressSpaceId, model);
+            var result = await Controller.Create(addressSpaceId, model);
 
             // Assert
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);
-            Assert.Equal(nameof(_controller.GetById), createdResult.ActionName);
+            Assert.Equal(nameof(Controller.GetById), createdResult.ActionName);
             Assert.Equal(createdTag, createdResult.Value);
             
             var routeValues = createdResult.RouteValues;
@@ -161,10 +162,10 @@ namespace Ipam.Frontend.Tests.Controllers
             var addressSpaceId = "space1";
             var model = new TagCreateModel(); // Invalid - missing required fields
             
-            _controller.ModelState.AddModelError("Name", "Name is required");
+            Controller.ModelState.AddModelError("Name", "Name is required");
 
             // Act
-            var result = await _controller.Create(addressSpaceId, model);
+            var result = await Controller.Create(addressSpaceId, model);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -185,7 +186,7 @@ namespace Ipam.Frontend.Tests.Controllers
             };
 
             // Act
-            var result = await _controller.Create(addressSpaceId, model);
+            var result = await Controller.Create(addressSpaceId, model);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -221,7 +222,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(createdTag);
 
             // Act
-            var result = await _controller.Create(addressSpaceId, model);
+            var result = await Controller.Create(addressSpaceId, model);
 
             // Assert
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -274,7 +275,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 Description = model.Description,
                 KnownValues = model.KnownValues
             };
-            var result = await _controller.Update(addressSpaceId, tagName, updateModel);
+            var result = await Controller.Update(addressSpaceId, tagName, updateModel);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -298,7 +299,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync((Tag)null);
 
             // Act
-            var result = await _controller.Update(addressSpaceId, tagName, model);
+            var result = await Controller.Update(addressSpaceId, tagName, model);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
@@ -320,7 +321,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(existingTag);
 
             // Act
-            var result = await _controller.Delete(addressSpaceId, tagName);
+            var result = await Controller.Delete(addressSpaceId, tagName);
 
             // Assert
             Assert.IsType<NoContentResult>(result);
@@ -338,7 +339,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync((Tag)null);
 
             // Act
-            var result = await _controller.Delete(addressSpaceId, tagName);
+            var result = await Controller.Delete(addressSpaceId, tagName);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
@@ -371,7 +372,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(createdTag);
 
             // Act
-            var result = await _controller.Create(addressSpaceId, model);
+            var result = await Controller.Create(addressSpaceId, model);
 
             // Assert
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -407,7 +408,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(createdTag);
 
             // Act
-            var result = await _controller.Create(addressSpaceId, model);
+            var result = await Controller.Create(addressSpaceId, model);
 
             // Assert
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -429,7 +430,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(emptyTags);
 
             // Act
-            var result = await _controller.GetAll(addressSpaceId);
+            var result = await Controller.GetAll(addressSpaceId);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Tag>>>(result);
@@ -468,7 +469,7 @@ namespace Ipam.Frontend.Tests.Controllers
                 .ReturnsAsync(existingTag);
 
             // Act
-            await _controller.Update(addressSpaceId, tagName, model);
+            await Controller.Update(addressSpaceId, tagName, model);
 
             // Assert
             Assert.NotNull(capturedTag);

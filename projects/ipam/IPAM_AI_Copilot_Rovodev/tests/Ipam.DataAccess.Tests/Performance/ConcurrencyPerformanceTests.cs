@@ -1,4 +1,5 @@
 using Xunit;
+using Ipam.DataAccess.Tests.TestHelpers;
 using Xunit.Abstractions;
 using Moq;
 using System;
@@ -87,7 +88,7 @@ namespace Ipam.DataAccess.Tests.Performance
         public async Task ConcurrentUpdates_WithConcurrencyControl_ShouldMaintainThroughput()
         {
             // Arrange
-            const string addressSpaceId = "perf-test";
+            const string addressSpaceId = TestConstants.PerformanceTestAddressSpaceId;
             const int operationCount = 100;
             const int concurrentThreads = 10;
 

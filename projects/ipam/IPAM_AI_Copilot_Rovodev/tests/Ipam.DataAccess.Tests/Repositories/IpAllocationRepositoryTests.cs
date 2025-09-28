@@ -27,10 +27,7 @@ namespace Ipam.DataAccess.Tests.Repositories
 
         public IpAllocationRepositoryTests()
         {
-            _configMock = new Mock<IConfiguration>();
-            var connectionStringsSection = new Mock<IConfigurationSection>();
-            connectionStringsSection.Setup(s => s["AzureTableStorage"]).Returns("UseDevelopmentStorage=true");
-            _configMock.Setup(c => c.GetSection("ConnectionStrings")).Returns(connectionStringsSection.Object);
+            _configMock = MockHelpers.CreateMockConfiguration();
 
             _mockTableClient = new MockTableClient();
             _ipAllocationRepository = new IpAllocationRepository(_configMock.Object);
@@ -588,18 +585,15 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CompleteLifecycle_CreateUpdateDelete_ShouldWorkCorrectly()
         {
             // Arrange
-            var addressSpaceId = "space1";
+            var addressSpaceId = TestConstants.DefaultAddressSpaceId;
             var ipId = "ip-lifecycle-test";
 
-            var originalEntity = new IpAllocationEntity
-            {
-                Id = ipId,
-                AddressSpaceId = addressSpaceId,
-                Prefix = "10.0.1.0/24",
-                Tags = new Dictionary<string, string> { { "Environment", "Test" } },
-                CreatedOn = DateTime.UtcNow,
-                ModifiedOn = DateTime.UtcNow
-            };
+            var originalEntity = TestDataBuilders.CreateTestIpAllocationEntity(
+                addressSpaceId,
+                TestConstants.Networks.ChildNetwork1,
+                ipId,
+                new Dictionary<string, string> { { "Environment", "Test" } }
+            );
 
             // Act 1: Create
             var createdEntity = await _ipAllocationRepository.CreateAsync(originalEntity);

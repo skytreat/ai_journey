@@ -36,6 +36,9 @@ namespace Ipam.Frontend.Controllers
         [Authorize(Roles = "SystemAdmin,AddressSpaceAdmin")]
         public async Task<IActionResult> Create([FromBody] AddressSpaceCreateModel model)
         {
+            if (model == null)
+                return BadRequest("Model cannot be null.");
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -100,6 +103,9 @@ namespace Ipam.Frontend.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] AddressSpaceUpdateModel model)
         {
+            if (model == null)
+                return BadRequest("Model cannot be null.");
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
