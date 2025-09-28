@@ -3,12 +3,14 @@ using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Ipam.DataAccess.Services;
+using Ipam.DataAccess.Interfaces;
 using Ipam.ServiceContract.Interfaces;
 using Ipam.Frontend.Controllers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Ipam.Frontend.Tests.Controllers
 {
@@ -22,14 +24,14 @@ namespace Ipam.Frontend.Tests.Controllers
     public class HealthControllerTests
     {
         private readonly Mock<IAddressSpaceService> _addressSpaceServiceMock;
-        private readonly Mock<PerformanceMonitoringService> _performanceServiceMock;
+        private readonly Mock<IPerformanceMonitoringService> _performanceServiceMock;
         private readonly Mock<ILogger<HealthController>> _loggerMock;
         private readonly HealthController _controller;
 
         public HealthControllerTests()
         {
             _addressSpaceServiceMock = new Mock<IAddressSpaceService>();
-            _performanceServiceMock = new Mock<PerformanceMonitoringService>();
+            _performanceServiceMock = new Mock<IPerformanceMonitoringService>();
             _loggerMock = new Mock<ILogger<HealthController>>();
             
             _controller = new HealthController(
@@ -136,7 +138,7 @@ namespace Ipam.Frontend.Tests.Controllers
 
             // Assert
             var statusResult = Assert.IsType<ObjectResult>(result);
-            Assert.Equal(500, statusResult.StatusCode);
+            Assert.Equal(503, statusResult.StatusCode);
         }
 
         [Fact]

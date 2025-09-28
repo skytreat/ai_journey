@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 using Ipam.DataAccess.Services;
+using Ipam.DataAccess.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,9 +17,9 @@ namespace Ipam.Frontend.Filters
     /// </remarks>
     public class PerformanceLoggingFilter : IAsyncActionFilter
     {
-        private readonly PerformanceMonitoringService _performanceService;
+        private readonly IPerformanceMonitoringService _performanceService;
 
-        public PerformanceLoggingFilter(PerformanceMonitoringService performanceService)
+        public PerformanceLoggingFilter(IPerformanceMonitoringService performanceService)
         {
             _performanceService = performanceService;
         }

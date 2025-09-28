@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Ipam.DataAccess.Services;
+using Ipam.DataAccess.Interfaces;
 using Ipam.DataAccess;
 using System;
 using System.Collections.Generic;
@@ -23,12 +24,12 @@ namespace Ipam.Frontend.Controllers
     public class HealthController : ControllerBase
     {
         private readonly IAddressSpaceService _addressSpaceService;
-        private readonly PerformanceMonitoringService _performanceService;
+        private readonly IPerformanceMonitoringService _performanceService;
         private readonly ILogger<HealthController> _logger;
 
         public HealthController(
             IAddressSpaceService addressSpaceService,
-            PerformanceMonitoringService performanceService,
+            IPerformanceMonitoringService performanceService,
             ILogger<HealthController> logger)
         {
             _addressSpaceService = addressSpaceService;

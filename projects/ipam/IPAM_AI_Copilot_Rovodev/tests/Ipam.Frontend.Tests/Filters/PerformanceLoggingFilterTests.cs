@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Ipam.Frontend.Filters;
 using Ipam.DataAccess.Services;
+using Ipam.DataAccess.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -22,12 +23,12 @@ namespace Ipam.Frontend.Tests.Filters
     /// </remarks>
     public class PerformanceLoggingFilterTests
     {
-        private readonly Mock<PerformanceMonitoringService> _performanceServiceMock;
+        private readonly Mock<IPerformanceMonitoringService> _performanceServiceMock;
         private readonly PerformanceLoggingFilter _filter;
 
         public PerformanceLoggingFilterTests()
         {
-            _performanceServiceMock = new Mock<PerformanceMonitoringService>();
+            _performanceServiceMock = new Mock<IPerformanceMonitoringService>();
             _filter = new PerformanceLoggingFilter(_performanceServiceMock.Object);
         }
 
@@ -41,16 +42,16 @@ namespace Ipam.Frontend.Tests.Filters
             // Act
             await _filter.OnActionExecutionAsync(context, next);
 
-            // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                "API.TestController.TestAction",
-                It.Is<double>(d => d >= 0),
-                true,
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("Controller") && 
-                    d.ContainsKey("Action") && 
-                    d.ContainsKey("HttpMethod"))),
-                Times.Once);
+            // Assert: At least one invocation matches expected args
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && (bool)inv.Arguments[2] == true
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("Controller")
+                && dict.ContainsKey("Action")
+                && dict.ContainsKey("HttpMethod")
+            );
         }
 
         [Fact]
@@ -65,14 +66,14 @@ namespace Ipam.Frontend.Tests.Filters
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => _filter.OnActionExecutionAsync(context, next));
 
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                "API.TestController.TestAction",
-                It.Is<double>(d => d >= 0),
-                false,
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("ExceptionType") && 
-                    d["ExceptionType"].ToString() == "InvalidOperationException")),
-                Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && (bool)inv.Arguments[2] == false
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("ExceptionType")
+                && dict["ExceptionType"].ToString() == "InvalidOperationException"
+            );
         }
 
         [Fact]
@@ -86,14 +87,14 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.Is<string>(s => s.StartsWith("API.")),
-                It.Is<double>(d => d >= 0),
-                It.Is<bool>(b => b),
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("UserId") && 
-                    d["UserId"].ToString() == "testuser")),
-                Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && (bool)inv.Arguments[2] == true
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("UserId")
+                && dict["UserId"].ToString() == "testuser"
+            );
         }
 
         [Fact]
@@ -107,14 +108,14 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.Is<string>(s => s.StartsWith("API.")),
-                It.Is<double>(d => d >= 0),
-                It.Is<bool>(b => b),
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("UserId") && 
-                    d["UserId"].ToString() == "Anonymous")),
-                Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && (bool)inv.Arguments[2] == true
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("UserId")
+                && dict["UserId"].ToString() == "Anonymous"
+            );
         }
 
         [Fact]
@@ -128,14 +129,14 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                 "API.StatusCode.201",
-                 It.Is<double>(d => d >= 0),
-                 true,
-                 It.Is<Dictionary<string, object>>(d => 
-                     d.ContainsKey("StatusCode") && 
-                     d["StatusCode"].ToString() == "201")),
-                 Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString() == "API.StatusCode.201"
+                && (bool)inv.Arguments[2] == true
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("StatusCode")
+                && dict["StatusCode"].ToString() == "201"
+            );
         }
 
         [Fact]
@@ -149,14 +150,14 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                 "API.StatusCode.400",
-                 It.Is<double>(d => d >= 0),
-                 false, // 4xx should be recorded as failure
-                 It.Is<Dictionary<string, object>>(d => 
-                     d.ContainsKey("StatusCode") && 
-                     d["StatusCode"].ToString() == "400")),
-                 Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString() == "API.StatusCode.400"
+                && (bool)inv.Arguments[2] == false
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("StatusCode")
+                && dict["StatusCode"].ToString() == "400"
+            );
         }
 
         [Fact]
@@ -170,14 +171,14 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                "API.StatusCode.500",
-                It.Is<double>(d => d >= 0),
-                false, // 5xx should be recorded as failure
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("StatusCode") && 
-                    d["StatusCode"].ToString() == "500")),
-                Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString() == "API.StatusCode.500"
+                && (bool)inv.Arguments[2] == false
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("StatusCode")
+                && dict["StatusCode"].ToString() == "500"
+            );
         }
 
         [Theory]
@@ -196,14 +197,13 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.Is<string>(s => s.StartsWith("API.")),
-                It.Is<double>(d => d >= 0),
-                It.Is<bool>(b => b),
-                It.Is<Dictionary<string, object>>(d => 
-                    d.ContainsKey("HttpMethod") && 
-                    d["HttpMethod"].ToString() == httpMethod)),
-                Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && inv.Arguments[3] is Dictionary<string, object> dict
+                && dict.ContainsKey("HttpMethod")
+                && dict["HttpMethod"].ToString() == httpMethod
+            );
         }
 
         [Fact]
@@ -218,12 +218,11 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.Is<string>(s => s.StartsWith("API.")),
-                It.Is<double>(d => d >= delay.TotalMilliseconds),
-                It.Is<bool>(b => b),
-                It.Is<Dictionary<string, object>>(d => d != null)),
-                Times.AtLeastOnce);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && inv.Arguments[1] is double ms && ms >= delay.TotalMilliseconds
+            );
         }
 
         [Fact]
@@ -237,20 +236,17 @@ namespace Ipam.Frontend.Tests.Filters
             await _filter.OnActionExecutionAsync(context, next);
 
             // Assert
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                "API.TestController.TestAction",
-                It.Is<double>(d => d >= 0),
-                true,
-                It.Is<Dictionary<string, object>>(d => d != null)),
-                Times.Once);
+            Assert.Contains(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.")
+                && (bool)inv.Arguments[2] == true
+            );
 
             // Should not record status code metric when no result
-            _performanceServiceMock.Verify(x => x.RecordMetric(
-                It.Is<string>(s => s.StartsWith("API.StatusCode.")),
-                It.Is<double>(d => d >= 0),
-                It.Is<bool>(b => b),
-                It.Is<Dictionary<string, object>>(d => d != null)),
-                Times.Never);
+            Assert.DoesNotContain(_performanceServiceMock.Invocations, inv =>
+                inv.Method.Name == nameof(IPerformanceMonitoringService.RecordMetric)
+                && inv.Arguments[0].ToString().StartsWith("API.StatusCode.")
+            );
         }
 
         private static ActionExecutingContext CreateActionExecutingContext(

@@ -91,10 +91,10 @@ namespace Ipam.Frontend.Controllers
                 KnownValues = model.KnownValues?.ToList() ?? new List<string>(),
                 Implies = model.Implies ?? new Dictionary<string, Dictionary<string, string>>(),
                 Attributes = model.Attributes ?? new Dictionary<string, Dictionary<string, string>>(),
+                Name = tagName,
+                AddressSpaceId = addressSpaceId,
+                ModifiedOn = DateTime.UtcNow
             };
-
-            tagToUpdate.Name = tagName;
-            tagToUpdate.AddressSpaceId = addressSpaceId;
             var updatedTag = await _tagService.UpdateTagAsync(tagToUpdate);
             if (updatedTag == null)
             {

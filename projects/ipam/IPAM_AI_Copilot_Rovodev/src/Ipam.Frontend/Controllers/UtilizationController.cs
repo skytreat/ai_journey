@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ipam.DataAccess.Services;
+using Ipam.DataAccess.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,13 +22,13 @@ namespace Ipam.Frontend.Controllers
     public class UtilizationController : ControllerBase
     {
         private readonly IIpAllocationService _allocationService;
-        private readonly PerformanceMonitoringService _performanceService;
-        private readonly AuditService _auditService;
+        private readonly IPerformanceMonitoringService _performanceService;
+        private readonly IAuditService _auditService;
 
         public UtilizationController(
             IIpAllocationService allocationService,
-            PerformanceMonitoringService performanceService,
-            AuditService auditService)
+            IPerformanceMonitoringService performanceService,
+            IAuditService auditService)
         {
             _allocationService = allocationService;
             _performanceService = performanceService;

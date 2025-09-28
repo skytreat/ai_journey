@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Ipam.DataAccess.Interfaces;
 
 namespace Ipam.DataAccess.Services
 {
@@ -14,7 +15,7 @@ namespace Ipam.DataAccess.Services
     /// Author: IPAM Team
     /// Date: 2024-01-20
     /// </remarks>
-    public class PerformanceMonitoringService
+    public class PerformanceMonitoringService : IPerformanceMonitoringService
     {
         private readonly ILogger<PerformanceMonitoringService> _logger;
         private readonly ConcurrentDictionary<string, PerformanceMetric> _metrics;
@@ -102,7 +103,7 @@ namespace Ipam.DataAccess.Services
         /// </summary>
         /// <param name="metricName">Name of the metric</param>
         /// <returns>Performance statistics or null if metric doesn't exist</returns>
-        public PerformanceStatistics GetStatistics(string metricName)
+        public PerformanceStatistics? GetStatistics(string metricName)
         {
             return _metrics.TryGetValue(metricName, out var metric) 
                 ? metric.GetStatistics() 
@@ -121,6 +122,14 @@ namespace Ipam.DataAccess.Services
                 result[kvp.Key] = kvp.Value.GetStatistics();
             }
             return result;
+        }
+
+        /// <summary>
+        /// Clears all collected statistics
+        /// </summary>
+        public void ClearStatistics()
+        {
+            _metrics.Clear();
         }
 
         /// <summary>

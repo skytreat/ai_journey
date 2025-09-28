@@ -49,7 +49,8 @@ namespace Ipam.Frontend.Tests.Controllers
             var result = await _controller.GetById("1");
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var actionResult = Assert.IsType<ActionResult<AddressSpace>>(result);
+            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
             Assert.Equal(addressSpace, okResult.Value);
         }
     }

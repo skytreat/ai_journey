@@ -2,6 +2,7 @@ using Xunit;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Ipam.DataAccess.Services;
+using Ipam.DataAccess.Interfaces;
 using Ipam.Frontend.Controllers;
 using Ipam.ServiceContract.Interfaces;
 using Ipam.ServiceContract.Models;
@@ -24,15 +25,15 @@ namespace Ipam.Frontend.Tests.Controllers
     public class UtilizationControllerTests
     {
         private readonly Mock<IIpAllocationService> _allocationServiceMock;
-        private readonly Mock<PerformanceMonitoringService> _performanceServiceMock;
-        private readonly Mock<AuditService> _auditServiceMock;
+        private readonly Mock<IPerformanceMonitoringService> _performanceServiceMock;
+        private readonly Mock<IAuditService> _auditServiceMock;
         private readonly UtilizationController _controller;
 
         public UtilizationControllerTests()
         {
             _allocationServiceMock = new Mock<IIpAllocationService>();
-            _performanceServiceMock = new Mock<PerformanceMonitoringService>();
-            _auditServiceMock = new Mock<AuditService>();
+            _performanceServiceMock = new Mock<IPerformanceMonitoringService>();
+            _auditServiceMock = new Mock<IAuditService>();
             
             _controller = new UtilizationController(
                 _allocationServiceMock.Object,

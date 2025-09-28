@@ -64,7 +64,8 @@ namespace Ipam.Frontend.Tests.Controllers
             var result = await _controller.GetById(addressSpaceId, tagName);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var actionResult = Assert.IsType<ActionResult<Tag>>(result);
+            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
             var tag = Assert.IsType<Tag>(okResult.Value);
             Assert.Equal(expectedTag.Name, tag.Name);
             Assert.Equal(expectedTag.Type, tag.Type);
@@ -84,7 +85,8 @@ namespace Ipam.Frontend.Tests.Controllers
             var result = await _controller.GetById(addressSpaceId, tagName);
 
             // Assert
-            Assert.IsType<NotFoundResult>(result);
+            var actionResult = Assert.IsType<ActionResult<Tag>>(result);
+            Assert.IsType<NotFoundResult>(actionResult.Result);
         }
 
         [Fact]
@@ -106,7 +108,8 @@ namespace Ipam.Frontend.Tests.Controllers
             var result = await _controller.GetAll(addressSpaceId);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var actionResult = Assert.IsType<ActionResult<IEnumerable<Tag>>>(result);
+            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
             var tags = Assert.IsAssignableFrom<IEnumerable<Tag>>(okResult.Value);
             Assert.Equal(3, ((List<Tag>)tags).Count);
         }
@@ -165,7 +168,8 @@ namespace Ipam.Frontend.Tests.Controllers
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Equal(_controller.ModelState, badRequestResult.Value);
+            var serializableError = Assert.IsType<SerializableError>(badRequestResult.Value);
+            Assert.Contains("Name", serializableError.Keys);
         }
 
         [Fact]
@@ -428,7 +432,8 @@ namespace Ipam.Frontend.Tests.Controllers
             var result = await _controller.GetAll(addressSpaceId);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var actionResult = Assert.IsType<ActionResult<IEnumerable<Tag>>>(result);
+            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
             var tags = Assert.IsAssignableFrom<IEnumerable<Tag>>(okResult.Value);
             Assert.Empty(tags);
         }
@@ -459,7 +464,7 @@ namespace Ipam.Frontend.Tests.Controllers
             // Capture the tag passed to UpdateTagAsync to verify ModifiedOn is set
             Tag capturedTag = null;
             _tagServiceMock.Setup(x => x.UpdateTagAsync(It.IsAny<Tag>(), CancellationToken.None))
-                .Callback<Tag>(tag => capturedTag = tag)
+                .Callback<Tag, CancellationToken>((tag, _) => capturedTag = tag)
                 .ReturnsAsync(existingTag);
 
             // Act
