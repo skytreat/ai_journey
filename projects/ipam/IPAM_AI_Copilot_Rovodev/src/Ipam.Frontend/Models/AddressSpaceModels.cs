@@ -20,23 +20,6 @@ namespace Ipam.Frontend.Models
     }
 
     /// <summary>
-    /// Model for creating or updating an address space
-    /// </summary>
-    /// <remarks>
-    /// Author: IPAM Team
-    /// Date: 2024-01-20
-    /// </remarks>
-    public class AddressSpaceModel
-    {
-        [Required]
-        [StringLength(100)]
-        public string Name { get; set; }
-
-        [StringLength(500)]
-        public string Description { get; set; }
-    }
-
-    /// <summary>
     /// Model for updating an existing address space
     /// </summary>
     public class AddressSpaceUpdateModel

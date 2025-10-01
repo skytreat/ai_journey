@@ -11,13 +11,30 @@ using Ipam.Frontend.Tests.TestHelpers;
 namespace Ipam.Frontend.Tests.Controllers
 {
     public class AddressSpacesControllerTests : ControllerTestBase<AddressSpacesController>
-    {
+    {        
         private Mock<IAddressSpaceService> _addressSpaceServiceMock;
 
         protected override AddressSpacesController CreateController()
         {
             _addressSpaceServiceMock = new Mock<IAddressSpaceService>();
             return new AddressSpacesController(_addressSpaceServiceMock.Object);
+        }
+
+        [Fact]
+        public async Task CreateAddressSpace_WithExistingId_ReturnsConflict()
+        {
+            // Arrange
+            var model = new AddressSpaceCreateModel { Id = "1", Name = "Test Space" };
+            var existingAddressSpace = new AddressSpace { Id = "1", Name = "Test Space" };
+            _addressSpaceServiceMock.Setup(x => x.GetAddressSpaceByIdAsync("1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingAddressSpace);
+
+            // Act
+            var result = await Controller.Create(model);
+
+            // Assert
+            var conflictResult = Assert.IsType<ConflictObjectResult>(result);
+            Assert.Contains("already exists", conflictResult.Value?.ToString());
         }
 
         [Fact]

@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ipam.DataAccess.Tests.TestHelpers;
 using Ipam.ServiceContract.Models;
 
 namespace Ipam.DataAccess.Tests.Services
@@ -85,11 +86,10 @@ namespace Ipam.DataAccess.Tests.Services
             var subnetSize = 24;
             var count = 3;
 
-            var existingNodes = new List<IpAllocationEntity>
-            {
-                new IpAllocationEntity { Prefix = "10.0.1.0/24" },
-                new IpAllocationEntity { Prefix = "10.0.2.0/24" }
-            };
+            var existingNodes = TestDataBuilders.CreateIpAllocationList(
+                "10.0.1.0/24", 
+                "10.0.2.0/24"
+            );
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
                 .ReturnsAsync(existingNodes);
@@ -141,11 +141,10 @@ namespace Ipam.DataAccess.Tests.Services
         {
             // Arrange
             var networkCidr = "10.0.0.0/24";
-            var subnets = new List<IpAllocationEntity>
-            {
-                new IpAllocationEntity { Prefix = "10.0.0.0/26" },   // 64 addresses
-                new IpAllocationEntity { Prefix = "10.0.0.64/26" }   // 64 addresses
-            };
+            var subnets = TestDataBuilders.CreateIpAllocationList(
+                "10.0.0.0/26",   // 64 addresses
+                "10.0.0.64/26"   // 64 addresses
+            );
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
                 .ReturnsAsync(subnets);
@@ -174,11 +173,10 @@ namespace Ipam.DataAccess.Tests.Services
             var proposedCidr = "10.0.1.0/24";
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpAllocationEntity>
-                {
-                    new IpAllocationEntity { Prefix = "10.0.2.0/24" },
-                    new IpAllocationEntity { Prefix = "10.0.3.0/24" }
-                });
+                .ReturnsAsync(TestDataBuilders.CreateIpAllocationList(
+                    "10.0.2.0/24",
+                    "10.0.3.0/24"
+                ));
 
             // Act
             var result = await _service.ValidateSubnetAllocationAsync("space1", proposedCidr);
@@ -196,11 +194,10 @@ namespace Ipam.DataAccess.Tests.Services
             var proposedCidr = "10.0.1.0/24";
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
-                .ReturnsAsync(new List<IpAllocationEntity>
-                {
-                    new IpAllocationEntity { Prefix = "10.0.1.0/25" },  // Overlaps with proposed
-                    new IpAllocationEntity { Prefix = "10.0.2.0/24" }
-                });
+                .ReturnsAsync(TestDataBuilders.CreateIpAllocationList(
+                    "10.0.1.0/25",  // Overlaps with proposed
+                    "10.0.2.0/24"
+                ));
 
             // Act
             var result = await _service.ValidateSubnetAllocationAsync("space1", proposedCidr);
@@ -258,13 +255,7 @@ namespace Ipam.DataAccess.Tests.Services
             var subnetSize = 32; // Individual hosts
 
             // Fill up all available space
-            var existingNodes = new List<IpAllocationEntity>
-            {
-                new IpAllocationEntity { Prefix = "10.0.0.0/32" },
-                new IpAllocationEntity { Prefix = "10.0.0.1/32" },
-                new IpAllocationEntity { Prefix = "10.0.0.2/32" },
-                new IpAllocationEntity { Prefix = "10.0.0.3/32" }
-            };
+            var existingNodes = TestDataBuilders.CreateSequentialIpAllocations("10.0.0.0/32", 4);
 
             _ipNodeRepositoryMock.Setup(x => x.GetChildrenAsync("space1", null))
                 .ReturnsAsync(existingNodes);

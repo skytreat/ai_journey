@@ -7,6 +7,7 @@ using Ipam.ServiceContract.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ipam.DataAccess.Tests.TestHelpers;
 
 namespace Ipam.DataAccess.Tests.Services
 {
@@ -38,7 +39,7 @@ namespace Ipam.DataAccess.Tests.Services
             };
 
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "NonInheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateNonInheritableTag());
 
             // Act
             var result = await _service.ApplyTagImplications("space1", inputTags);
@@ -112,7 +113,7 @@ namespace Ipam.DataAccess.Tests.Services
             var childTags = new Dictionary<string, string> { { "Application", "WebServer" } };
 
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "NonInheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateNonInheritableTag());
 
             // Act & Assert
             await _service.ValidateTagInheritance("space1", parentTags, childTags);
@@ -126,7 +127,7 @@ namespace Ipam.DataAccess.Tests.Services
             var childTags = new Dictionary<string, string> { { "Environment", "Development" } };
 
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "Inheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateInheritableTag());
 
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(
@@ -141,9 +142,9 @@ namespace Ipam.DataAccess.Tests.Services
             var parentTags = new Dictionary<string, string> { { "Environment", "Production" } };
 
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "Inheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateInheritableTag());
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Application"))
-                .ReturnsAsync(new TagEntity { Type = "NonInheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateNonInheritableTag());
 
             // Act
             var result = await _service.GetEffectiveTags("space1", nodeTags, parentTags);
@@ -162,7 +163,7 @@ namespace Ipam.DataAccess.Tests.Services
             var parentTags = new Dictionary<string, string> { { "Environment", "Production" } };
 
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "Inheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateInheritableTag());
 
             // Act
             var result = await _service.GetEffectiveTags("space1", nodeTags, parentTags);
@@ -189,9 +190,9 @@ namespace Ipam.DataAccess.Tests.Services
             };
 
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "Inheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateInheritableTag());
             _tagRepositoryMock.Setup(x => x.GetByNameAsync("space1", "Application"))
-                .ReturnsAsync(new TagEntity { Type = "NonInheritable" });
+                .ReturnsAsync(TestDataBuilders.CreateNonInheritableTag());
 
             // Act
             await _service.PropagateTagsToChildren("space1", parentTags, children);

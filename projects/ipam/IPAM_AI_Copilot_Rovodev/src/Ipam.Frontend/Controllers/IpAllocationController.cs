@@ -52,6 +52,34 @@ namespace Ipam.Frontend.Controllers
         [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "addressSpaceId", "cidr", "tags" })]
         public async Task<IActionResult> GetAll(string addressSpaceId, [FromQuery] string cidr = null, [FromQuery] Dictionary<string, string> tags = null)
         {
+            if (!string.IsNullOrEmpty(cidr))
+            {
+                try
+                {
+                    var prefixObj = new ServiceContract.Models.Prefix(cidr);
+                    var ipAllocations1 = await _ipAllocationService.GetIpAllocationsByPrefixAsync(addressSpaceId, prefixObj, CancellationToken.None);
+                    return Ok(ipAllocations1);
+                }
+                catch (ArgumentException ex)
+                {
+                    return BadRequest($"Invalid CIDR format: {ex.Message}");
+                }
+            }
+
+            if (tags != null && tags.Any())
+            {
+                try
+                {
+                    var ipAllocations2 = await _ipAllocationService.GetIpAllocationsByTagsAsync(addressSpaceId, tags, CancellationToken.None);
+                    return Ok(ipAllocations2);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, $"Error retrieving IP allocations by tags: {ex.Message}");
+                }
+            }
+
+            // No filters applied, return all IP allocations
             var ipAllocations = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
             return Ok(ipAllocations);
         }
@@ -70,9 +98,20 @@ namespace Ipam.Frontend.Controllers
             if (model.AddressSpaceId != addressSpaceId)
                 return BadRequest("Address space ID mismatch between route and model.");
 
+            // Idempotency: check if an IP node with the same Id already exists (if Id is provided)
+            if (!string.IsNullOrEmpty(model.Id))
+            {
+                var existingById = await _ipAllocationService.GetIpAllocationByIdAsync(addressSpaceId, model.Id);
+                if (existingById != null)
+                {
+                    // Return 200 OK with the existing resource (idempotent)
+                    return Ok(existingById);
+                }
+            }
+
             var ipAllocation = new IpAllocation
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = !string.IsNullOrEmpty(model.Id) ? model.Id : Guid.NewGuid().ToString(),
                 AddressSpaceId = addressSpaceId,
                 Prefix = model.Prefix,
                 Tags = model.Tags ?? new Dictionary<string, string>(),
@@ -180,10 +219,7 @@ namespace Ipam.Frontend.Controllers
             if (parentIp == null)
                 return NotFound("Parent IP node not found.");
 
-            // Get all IPs in the address space and filter for children
-            var allIps = await _ipAllocationService.GetIpAllocationsAsync(addressSpaceId, CancellationToken.None);
-            var children = allIps.Where(ip => ip.ParentId == ipId);
-            
+            var children = await _ipAllocationService.GetChildrenAsync(addressSpaceId, ipId, CancellationToken.None);
             return Ok(children);
         }
     }

@@ -71,7 +71,7 @@ namespace Ipam.DataAccess
                     var baseRepository = new IpAllocationRepository(configuration);
                     var cache = provider.GetRequiredService<IMemoryCache>();
                     var cachingOptions = provider.GetRequiredService<IOptions<DataAccessOptions>>();
-                    return new CachingIpNodeRepository(baseRepository, cache, cachingOptions);
+                    return new CachingIpAllocationRepository(baseRepository, cache, cachingOptions);
                 });
             }
 

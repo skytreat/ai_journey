@@ -5,40 +5,35 @@ using Ipam.DataAccess.Entities;
 using Ipam.DataAccess.Repositories;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Ipam.DataAccess.Tests.TestHelpers;
 
 namespace Ipam.DataAccess.Tests.Repositories
 {
-    public class TagRepositoryTests
+    public class TagRepositoryTests : RepositoryTestBase<TagRepository, TagEntity>
     {
-        private readonly TagRepository _tagRepository;
-
-        public TagRepositoryTests()
+        protected override TagRepository CreateRepository()
         {
-            var configMock = new Mock<IConfiguration>();
-            configMock.Setup(c => c["ConnectionStrings:AzureTableStorage"])
-                       .Returns("UseDevelopmentStorage=true");
-            
-            _tagRepository = new TagRepository(configMock.Object);
+            return new TagRepository(ConfigMock.Object);
+        }
+
+        protected override TagEntity CreateTestEntity()
+        {
+            return TestDataBuilders.CreateTestTagEntity();
         }
 
         [Fact]
         public async Task CreateAsync_ValidTag_ShouldSucceed()
         {
             // Arrange
-            var tag = new TagEntity
-            {
-                PartitionKey = "space1",
-                RowKey = "Region",
-                Type = "Inheritable",
-                KnownValues = new List<string> { "USEast", "USWest" },
-                Implies = new Dictionary<string, Dictionary<string, string>>
-                {
-                    { "Datacenter", new Dictionary<string, string> { { "USEast", "DC1" } } }
-                }
-            };
+            var tag = TestDataBuilders.CreateTestTagEntity(
+                TestConstants.DefaultAddressSpaceId,
+                "Region",
+                "Inheritable",
+                new List<string> { "USEast", "USWest" }
+            );
 
             // Act
-            var result = await _tagRepository.CreateAsync(tag);
+            var result = await Repository.CreateAsync(tag);
 
             // Assert
             Assert.NotNull(result);
@@ -72,7 +67,7 @@ namespace Ipam.DataAccess.Tests.Repositories
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _tagRepository.CreateAsync(tag));
+            await Assert.ThrowsAsync<ArgumentException>(() => Repository.CreateAsync(tag));
         }
     }
 }

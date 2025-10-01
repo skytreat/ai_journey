@@ -11,7 +11,7 @@ namespace Ipam.DataAccess.Repositories.Decorators
     /// </summary>
     public class CachingRepositoryDecorator<TRepository>
     {
-        private readonly TRepository _inner;
+        private readonly TRepository _innerRepository;
         private readonly IMemoryCache _cache;
         private readonly DataAccessOptions _options;
 
@@ -20,10 +20,20 @@ namespace Ipam.DataAccess.Repositories.Decorators
             IMemoryCache cache,
             IOptions<DataAccessOptions> options)
         {
-            _inner = inner;
+            _innerRepository = inner;
             _cache = cache;
             _options = options.Value;
         }
+
+        /// <summary>
+        /// Protected access to the inner repository for derived classes
+        /// </summary>
+        protected TRepository Repository => _innerRepository;
+
+        /// <summary>
+        /// Protected access to the memory cache for derived classes
+        /// </summary>
+        protected IMemoryCache Cache => _cache;
 
         protected async Task<T> WithCache<T>(string key, Func<Task<T>> factory)
         {

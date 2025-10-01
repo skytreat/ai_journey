@@ -47,6 +47,7 @@ namespace Ipam.Frontend.Controllers
                 var existingAddressSpace = await _addressSpaceService.GetAddressSpaceByIdAsync(model.Id);
                 if (existingAddressSpace != null)
                 {
+                    // Return 200 OK with the existing resource (idempotent)
                     return Ok(existingAddressSpace);
                 }
             }

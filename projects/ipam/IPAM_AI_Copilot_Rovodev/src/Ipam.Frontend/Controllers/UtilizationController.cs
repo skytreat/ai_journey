@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ipam.ServiceContract.Interfaces;
+using Ipam.Frontend.Models;
 
 namespace Ipam.Frontend.Controllers
 {
@@ -209,22 +210,5 @@ namespace Ipam.Frontend.Controllers
                 return StatusCode(500, new { error = "Failed to generate utilization report", details = ex.Message });
             }
         }
-    }
-
-    /// <summary>
-    /// Request model for subnet validation
-    /// </summary>
-    public class SubnetValidationRequest
-    {
-        public string ProposedCidr { get; set; }
-    }
-
-    /// <summary>
-    /// Request model for subnet allocation
-    /// </summary>
-    public class SubnetAllocationRequest
-    {
-        public int SubnetSize { get; set; }
-        public Dictionary<string, string> Tags { get; set; } = new Dictionary<string, string>();
     }
 }
