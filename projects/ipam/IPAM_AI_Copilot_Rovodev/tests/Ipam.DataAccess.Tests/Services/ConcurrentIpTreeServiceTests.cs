@@ -347,7 +347,7 @@ namespace Ipam.DataAccess.Tests.Services
             // Mock tag repository to return inheritable tag
             var mockTagRepo = new Mock<ITagRepository>();
             mockTagRepo.Setup(x => x.GetByNameAsync(addressSpaceId, "Environment"))
-                .ReturnsAsync(new TagEntity { Type = "Inheritable" });
+                .ReturnsAsync(new OptimizedTagEntity { Type = "Inheritable" });
 
             var tagInheritanceService = new TagInheritanceService(mockTagRepo.Object);
 

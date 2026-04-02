@@ -71,11 +71,11 @@ namespace Ipam.Frontend.Models
         [Required]
         [CidrValidation]
         [RegularExpression(@"^([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$", 
-            ErrorMessage = "Invalid CIDR format")]
-    public string? Prefix { get; set; }
+                ErrorMessage = "Invalid CIDR format")]
+        public string? Prefix { get; set; }
 
-        [TagsValidation]
-    public Dictionary<string, string>? Tags { get; set; }
+            [TagsValidation]
+        public Dictionary<string, string>? Tags { get; set; }
     }
 
     /// <summary>
@@ -95,12 +95,12 @@ namespace Ipam.Frontend.Models
         /// <summary>
         /// Gets or sets the address space identifier this IP node belongs to
         /// </summary>
-    public string? AddressSpaceId { get; set; }
+        public string? AddressSpaceId { get; set; }
 
         /// <summary>
         /// Gets or sets the IP prefix in CIDR format
         /// </summary>
-    public string? Prefix { get; set; }
+        public string? Prefix { get; set; }
 
         /// <summary>
         /// Gets or sets the parent node identifier
@@ -115,7 +115,7 @@ namespace Ipam.Frontend.Models
         /// <summary>
         /// Gets or sets the IP node tags
         /// </summary>
-    public Dictionary<string, string>? Tags { get; set; }
+        public Dictionary<string, string>? Tags { get; set; }
 
         /// <summary>
         /// Gets or sets the creation timestamp

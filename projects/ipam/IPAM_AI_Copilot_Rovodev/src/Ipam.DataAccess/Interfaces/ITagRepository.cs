@@ -9,11 +9,11 @@ namespace Ipam.DataAccess.Interfaces
     /// </summary>
     public interface ITagRepository
     {
-        Task<TagEntity> GetByNameAsync(string addressSpaceId, string tagName);
-        Task<IEnumerable<TagEntity>> GetAllAsync(string addressSpaceId);
-        Task<IEnumerable<TagEntity>> SearchByNameAsync(string addressSpaceId, string nameFilter);
-        Task<TagEntity> CreateAsync(TagEntity tag);
-        Task<TagEntity> UpdateAsync(TagEntity tag);
+        Task<OptimizedTagEntity> GetByNameAsync(string addressSpaceId, string tagName);
+        Task<IEnumerable<OptimizedTagEntity>> GetAllAsync(string addressSpaceId);
+        Task<IEnumerable<OptimizedTagEntity>> SearchByNameAsync(string addressSpaceId, string nameFilter);
+        Task<OptimizedTagEntity> CreateAsync(OptimizedTagEntity tag);
+        Task<OptimizedTagEntity> UpdateAsync(OptimizedTagEntity tag);
         Task DeleteAsync(string addressSpaceId, string tagName);
     }
 }

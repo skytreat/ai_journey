@@ -43,8 +43,20 @@ namespace Ipam.DataAccess.Mapping
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => "Active")) // Default status for DTO
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags));
 
-            // TagEntity -> Tag
+            // TagEntity -> Tag (Legacy mapping)
             CreateMap<TagEntity, Tag>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.AddressSpaceId, opt => opt.MapFrom(src => src.AddressSpaceId))
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type))
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
+                .ForMember(dest => dest.ModifiedOn, opt => opt.MapFrom(src => src.ModifiedOn))
+                .ForMember(dest => dest.KnownValues, opt => opt.MapFrom(src => src.KnownValues))
+                .ForMember(dest => dest.Implies, opt => opt.MapFrom(src => src.Implies))
+                .ForMember(dest => dest.Attributes, opt => opt.MapFrom(src => src.Attributes));
+
+            // OptimizedTagEntity -> Tag (Performance optimized mapping)
+            CreateMap<OptimizedTagEntity, Tag>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.AddressSpaceId, opt => opt.MapFrom(src => src.AddressSpaceId))
                 .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
@@ -86,8 +98,24 @@ namespace Ipam.DataAccess.Mapping
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
 
-            // Tag -> TagEntity
+            // Tag -> TagEntity (Legacy mapping)
             CreateMap<Tag, TagEntity>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AddressSpaceId))
+                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.AddressSpaceId, opt => opt.MapFrom(src => src.AddressSpaceId))
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type))
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
+                .ForMember(dest => dest.ModifiedOn, opt => opt.MapFrom(src => src.ModifiedOn))
+                .ForMember(dest => dest.KnownValues, opt => opt.MapFrom(src => src.KnownValues))
+                .ForMember(dest => dest.Implies, opt => opt.MapFrom(src => src.Implies))
+                .ForMember(dest => dest.Attributes, opt => opt.MapFrom(src => src.Attributes))
+                .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
+                .ForMember(dest => dest.ETag, opt => opt.Ignore());
+
+            // Tag -> OptimizedTagEntity (Performance optimized mapping)
+            CreateMap<Tag, OptimizedTagEntity>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AddressSpaceId))
                 .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => src.Name))

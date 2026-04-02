@@ -58,16 +58,16 @@ namespace Ipam.DataAccess.Tests.TestHelpers
         public static void SetupDefaultTagRepositoryMocks(Mock<ITagRepository> tagRepoMock, string addressSpaceId = TestConstants.DefaultAddressSpaceId)
         {
             tagRepoMock.Setup(r => r.GetByNameAsync(addressSpaceId, It.IsAny<string>()))
-                .ReturnsAsync((TagEntity?)null);
+                .ReturnsAsync((OptimizedTagEntity?)null);
                 
             tagRepoMock.Setup(r => r.GetAllAsync(addressSpaceId))
-                .ReturnsAsync(new List<TagEntity>());
+                .ReturnsAsync(new List<OptimizedTagEntity>());
                 
-            tagRepoMock.Setup(r => r.CreateAsync(It.IsAny<TagEntity>()))
-                .ReturnsAsync((TagEntity entity) => entity);
+            tagRepoMock.Setup(r => r.CreateAsync(It.IsAny<OptimizedTagEntity>()))
+                .ReturnsAsync((OptimizedTagEntity entity) => entity);
                 
-            tagRepoMock.Setup(r => r.UpdateAsync(It.IsAny<TagEntity>()))
-                .ReturnsAsync((TagEntity entity) => entity);
+            tagRepoMock.Setup(r => r.UpdateAsync(It.IsAny<OptimizedTagEntity>()))
+                .ReturnsAsync((OptimizedTagEntity entity) => entity);
                 
             tagRepoMock.Setup(r => r.DeleteAsync(addressSpaceId, It.IsAny<string>()))
                 .Returns(Task.CompletedTask);

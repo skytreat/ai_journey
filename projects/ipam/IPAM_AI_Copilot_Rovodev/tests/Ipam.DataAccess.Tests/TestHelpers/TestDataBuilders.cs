@@ -216,17 +216,60 @@ namespace Ipam.DataAccess.Tests.TestHelpers
         /// <summary>
         /// Creates an inheritable tag entity
         /// </summary>
-        public static TagEntity CreateInheritableTag(string name = "InheritableTag", string addressSpaceId = TestConstants.DefaultAddressSpaceId)
+        public static OptimizedTagEntity CreateInheritableTag(string name = "InheritableTag", string addressSpaceId = TestConstants.DefaultAddressSpaceId)
         {
-            return CreateTestTagEntity(addressSpaceId, name, "Inheritable");
+            return CreateTestOptimizedTagEntity(addressSpaceId, name, "Inheritable");
         }
 
         /// <summary>
         /// Creates a non-inheritable tag entity
         /// </summary>
-        public static TagEntity CreateNonInheritableTag(string name = "NonInheritableTag", string addressSpaceId = TestConstants.DefaultAddressSpaceId)
+        public static OptimizedTagEntity CreateNonInheritableTag(string name = "NonInheritableTag", string addressSpaceId = TestConstants.DefaultAddressSpaceId)
         {
-            return CreateTestTagEntity(addressSpaceId, name, "NonInheritable");
+            return CreateTestOptimizedTagEntity(addressSpaceId, name, "NonInheritable");
+        }
+
+        /// <summary>
+        /// Creates a test OptimizedTagEntity with default values
+        /// </summary>
+        public static OptimizedTagEntity CreateTestOptimizedTagEntity(
+            string addressSpaceId = TestConstants.DefaultAddressSpaceId,
+            string name = TestConstants.Tags.EnvironmentTagName,
+            string type = "Inheritable",
+            List<string>? knownValues = null)
+        {
+            var entity = new OptimizedTagEntity
+            {
+                AddressSpaceId = addressSpaceId,
+                Name = name,
+                Type = type,
+                Description = $"Test {name} tag",
+                CreatedOn = DateTime.UtcNow,
+                ModifiedOn = DateTime.UtcNow,
+                KnownValues = knownValues ?? new List<string> { "Development", "Staging", "Production" },
+                Implies = new Dictionary<string, Dictionary<string, string>>(),
+                Attributes = new Dictionary<string, Dictionary<string, string>>()
+            };
+            
+            // Flush changes to ensure JSON fields are populated
+            entity.FlushChanges();
+            return entity;
+        }
+
+        /// <summary>
+        /// Creates an inheritable OptimizedTagEntity
+        /// </summary>
+        public static OptimizedTagEntity CreateInheritableOptimizedTag(string name = "InheritableTag", string addressSpaceId = TestConstants.DefaultAddressSpaceId)
+        {
+            return CreateTestOptimizedTagEntity(addressSpaceId, name, "Inheritable");
+        }
+
+        /// <summary>
+        /// Creates a non-inheritable OptimizedTagEntity
+        /// </summary>
+        public static OptimizedTagEntity CreateNonInheritableOptimizedTag(string name = "NonInheritableTag", string addressSpaceId = TestConstants.DefaultAddressSpaceId)
+        {
+            return CreateTestOptimizedTagEntity(addressSpaceId, name, "NonInheritable");
         }
 
         /// <summary>

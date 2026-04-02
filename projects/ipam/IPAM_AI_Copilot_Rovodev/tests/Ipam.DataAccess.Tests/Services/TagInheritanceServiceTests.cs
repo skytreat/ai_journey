@@ -57,7 +57,7 @@ namespace Ipam.DataAccess.Tests.Services
                 { "Datacenter", "AMS05" }
             };
 
-            var datacenterTag = new TagEntity
+            var datacenterTag = new OptimizedTagEntity
             {
                 Type = "Inheritable",
                 Implies = new Dictionary<string, Dictionary<string, string>>
@@ -88,7 +88,7 @@ namespace Ipam.DataAccess.Tests.Services
                 { "Region", "USEast" } // Conflicts with implied Region=EuropeWest
             };
 
-            var datacenterTag = new TagEntity
+            var datacenterTag = new OptimizedTagEntity
             {
                 Type = "Inheritable",
                 Implies = new Dictionary<string, Dictionary<string, string>>
@@ -227,7 +227,7 @@ namespace Ipam.DataAccess.Tests.Services
             };
 
             // Create a tag definition where Datacenter=AMS05 implies Region=EuropeWest
-            var datacenterTag = new TagEntity
+            var datacenterTag = new OptimizedTagEntity
             {
                 AddressSpaceId = addressSpaceId,
                 Name = "Datacenter",
@@ -269,7 +269,7 @@ namespace Ipam.DataAccess.Tests.Services
             };
 
             // Create a tag definition that incorrectly tries to imply itself
-            var environmentTag = new TagEntity
+            var environmentTag = new OptimizedTagEntity
             {
                 AddressSpaceId = addressSpaceId,
                 Name = "Environment",

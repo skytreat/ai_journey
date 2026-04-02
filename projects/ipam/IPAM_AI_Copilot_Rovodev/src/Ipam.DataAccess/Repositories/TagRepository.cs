@@ -12,9 +12,9 @@ using Ipam.DataAccess.Entities;
 namespace Ipam.DataAccess.Repositories
 {
     /// <summary>
-    /// Implementation of tag repository using Azure Table Storage
+    /// Implementation of tag repository using Azure Table Storage with optimized performance
     /// </summary>
-    public class TagRepository : BaseRepository<TagEntity>, ITagRepository
+    public class TagRepository : BaseRepository<OptimizedTagEntity>, ITagRepository
     {
         private const string TableName = "Tags";
 
@@ -23,26 +23,26 @@ namespace Ipam.DataAccess.Repositories
         {
         }
 
-        public async Task<TagEntity> GetByNameAsync(string addressSpaceId, string tagName)
+        public async Task<OptimizedTagEntity> GetByNameAsync(string addressSpaceId, string tagName)
         {
-            return await TableClient.GetEntityAsync<TagEntity>(addressSpaceId, tagName);
+            return await TableClient.GetEntityAsync<OptimizedTagEntity>(addressSpaceId, tagName);
         }
 
-        public async Task<IEnumerable<TagEntity>> GetAllAsync(string addressSpaceId)
+        public async Task<IEnumerable<OptimizedTagEntity>> GetAllAsync(string addressSpaceId)
         {
-            var query = TableClient.QueryAsync<TagEntity>(t => t.PartitionKey == addressSpaceId);
+            var query = TableClient.QueryAsync<OptimizedTagEntity>(t => t.PartitionKey == addressSpaceId);
             return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<TagEntity>> SearchByNameAsync(string addressSpaceId, string nameFilter)
+        public async Task<IEnumerable<OptimizedTagEntity>> SearchByNameAsync(string addressSpaceId, string nameFilter)
         {
-            var query = TableClient.QueryAsync<TagEntity>(t => 
+            var query = TableClient.QueryAsync<OptimizedTagEntity>(t => 
                 t.PartitionKey == addressSpaceId && t.RowKey.Contains(nameFilter));
             
             return await query.ToListAsync();
         }
 
-        public async Task<TagEntity> CreateAsync(TagEntity tag)
+        public async Task<OptimizedTagEntity> CreateAsync(OptimizedTagEntity tag)
         {
             return await TableClient.ExecuteWithRetryAsync(async () =>
             {
@@ -51,12 +51,15 @@ namespace Ipam.DataAccess.Repositories
                     IpamValidator.ValidateTagImplications(tag.Implies);
                 }
 
+                // PERFORMANCE: Flush cached changes to JSON storage fields before saving
+                tag.FlushChanges();
+                
                 await TableClient.AddEntityAsync(tag);
                 return tag;
             });
         }
 
-        public async Task<TagEntity> UpdateAsync(TagEntity tag)
+        public async Task<OptimizedTagEntity> UpdateAsync(OptimizedTagEntity tag)
         {
             return await TableClient.ExecuteWithRetryAsync(async () =>
             {
@@ -65,6 +68,9 @@ namespace Ipam.DataAccess.Repositories
                     IpamValidator.ValidateTagImplications(tag.Implies);
                 }
 
+                // PERFORMANCE: Flush cached changes to JSON storage fields before saving
+                tag.FlushChanges();
+                
                 await TableClient.UpdateEntityAsync(tag, tag.ETag);
                 return tag;
             });

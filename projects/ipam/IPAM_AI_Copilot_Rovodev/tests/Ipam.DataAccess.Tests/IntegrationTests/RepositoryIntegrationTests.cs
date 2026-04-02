@@ -37,7 +37,7 @@ namespace Ipam.DataAccess.Tests.IntegrationTests
             await _unitOfWork.AddressSpaces.CreateAsync(addressSpace);
 
             // Create tag
-            var tag = new TagEntity
+            var tag = new OptimizedTagEntity
             {
                 PartitionKey = "test",
                 RowKey = "Environment",

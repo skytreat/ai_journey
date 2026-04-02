@@ -53,8 +53,8 @@ namespace Ipam.DataAccess.Services
                 tag.CreatedOn = DateTime.UtcNow;
                 tag.ModifiedOn = DateTime.UtcNow;
 
-                // Map to entity and create
-                var entity = _mapper.Map<TagEntity>(tag);
+                // Map to optimized entity and create
+                var entity = _mapper.Map<OptimizedTagEntity>(tag);
                 var createdEntity = await _tagRepository.CreateAsync(entity);
                 var result = _mapper.Map<Tag>(createdEntity);
                 

@@ -65,7 +65,7 @@ namespace Ipam.DataAccess.Tests.Performance
         private void SetupCommonMocks()
         {
             _mockTagRepository.Setup(t => t.GetByNameAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((TagEntity?)null);
+                .ReturnsAsync((OptimizedTagEntity?)null);
 
             _mockMapper.Setup(m => m.Map<IpAllocation>(It.IsAny<IpAllocationEntity>()))
                 .Returns<IpAllocationEntity>(e => new IpAllocation
@@ -504,7 +504,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 .ReturnsAsync((IpAllocationEntity?)null); // Simulate entity not found for creation scenarios
 
             tagRepositoryMock.Setup(x => x.GetByNameAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((TagEntity?)null);
+                .ReturnsAsync((OptimizedTagEntity?)null);
 
             ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))
                 .ReturnsAsync((IpAllocationEntity node) => 
@@ -538,7 +538,7 @@ namespace Ipam.DataAccess.Tests.Performance
                 .ReturnsAsync((IpAllocationEntity?)null);
 
             tagRepositoryMock.Setup(x => x.GetByNameAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((TagEntity?)null);
+                .ReturnsAsync((OptimizedTagEntity?)null);
 
             // Add delay to simulate long-running operation
             ipNodeRepositoryMock.Setup(x => x.CreateAsync(It.IsAny<IpAllocationEntity>()))

@@ -65,7 +65,7 @@ namespace Ipam.DataAccess.Tests.Services
                 }
             };
 
-            var tagEntity = new TagEntity
+            var tagEntity = new OptimizedTagEntity
             {
                 Name = "Environment",
                 AddressSpaceId = "space1",
@@ -73,7 +73,7 @@ namespace Ipam.DataAccess.Tests.Services
                 Type = "Inheritable"
             };
 
-            var createdEntity = new TagEntity
+            var createdEntity = new OptimizedTagEntity
             {
                 Name = "Environment",
                 AddressSpaceId = "space1",
@@ -83,15 +83,15 @@ namespace Ipam.DataAccess.Tests.Services
                 ModifiedOn = DateTime.UtcNow
             };
 
-            _mapperMock.Setup(m => m.Map<TagEntity>(tag))
+            _mapperMock.Setup(m => m.Map<OptimizedTagEntity>(tag))
                 .Returns(tagEntity);
             _mapperMock.Setup(m => m.Map<Tag>(createdEntity))
                 .Returns(tag);
 
             _tagRepositoryMock.Setup(r => r.GetByNameAsync("space1", "Environment"))
-                .ReturnsAsync((TagEntity)null); // Tag doesn't exist
+                .ReturnsAsync((OptimizedTagEntity)null); // Tag doesn't exist
 
-            _tagRepositoryMock.Setup(r => r.CreateAsync(It.IsAny<TagEntity>()))
+            _tagRepositoryMock.Setup(r => r.CreateAsync(It.IsAny<OptimizedTagEntity>()))
                 .ReturnsAsync(createdEntity);
 
             // Act
@@ -119,7 +119,7 @@ namespace Ipam.DataAccess.Tests.Services
                 Type = "Inheritable"
             };
 
-            var existingEntity = new TagEntity
+            var existingEntity = new OptimizedTagEntity
             {
                 Name = "Environment",
                 AddressSpaceId = "space1"
@@ -133,7 +133,7 @@ namespace Ipam.DataAccess.Tests.Services
                 () => _service.CreateTagAsync(tag));
 
             Assert.Contains("already exists", exception.Message);
-            _tagRepositoryMock.Verify(r => r.CreateAsync(It.IsAny<TagEntity>()), Times.Never);
+            _tagRepositoryMock.Verify(r => r.CreateAsync(It.IsAny<OptimizedTagEntity>()), Times.Never);
         }
 
         [Fact]
@@ -201,7 +201,7 @@ namespace Ipam.DataAccess.Tests.Services
             var tagName = "Environment";
             var addressSpaceId = "space1";
 
-            var entity = new TagEntity
+            var entity = new OptimizedTagEntity
             {
                 Name = tagName,
                 AddressSpaceId = addressSpaceId,
@@ -255,10 +255,10 @@ namespace Ipam.DataAccess.Tests.Services
         {
             // Arrange
             var addressSpaceId = "space1";
-            var entities = new List<TagEntity>
+            var entities = new List<OptimizedTagEntity>
             {
-                new TagEntity { Name = "Environment", AddressSpaceId = addressSpaceId },
-                new TagEntity { Name = "Region", AddressSpaceId = addressSpaceId }
+                new OptimizedTagEntity { Name = "Environment", AddressSpaceId = addressSpaceId },
+                new OptimizedTagEntity { Name = "Region", AddressSpaceId = addressSpaceId }
             };
 
             var dtos = new List<Tag>

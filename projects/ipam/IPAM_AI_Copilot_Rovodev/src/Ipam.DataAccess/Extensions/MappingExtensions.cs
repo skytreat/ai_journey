@@ -48,19 +48,19 @@ namespace Ipam.DataAccess.Extensions
         }
 
         /// <summary>
-        /// Maps TagEntity to Tag DTO
+        /// Maps OptimizedTagEntity to Tag DTO
         /// </summary>
-        public static Tag ToDto(this TagEntity entity, IMapper mapper)
+        public static Tag ToDto(this OptimizedTagEntity entity, IMapper mapper)
         {
             return mapper.Map<Tag>(entity);
         }
 
         /// <summary>
-        /// Maps Tag DTO to TagEntity
+        /// Maps Tag DTO to OptimizedTagEntity
         /// </summary>
-        public static TagEntity ToEntity(this Tag dto, IMapper mapper)
+        public static OptimizedTagEntity ToEntity(this Tag dto, IMapper mapper)
         {
-            return mapper.Map<TagEntity>(dto);
+            return mapper.Map<OptimizedTagEntity>(dto);
         }
 
         /// <summary>
@@ -80,9 +80,9 @@ namespace Ipam.DataAccess.Extensions
         }
 
         /// <summary>
-        /// Maps collection of TagEntity to Tag DTOs
+        /// Maps collection of OptimizedTagEntity to Tag DTOs
         /// </summary>
-        public static IEnumerable<Tag> ToDtos(this IEnumerable<TagEntity> entities, IMapper mapper)
+        public static IEnumerable<Tag> ToDtos(this IEnumerable<OptimizedTagEntity> entities, IMapper mapper)
         {
             return entities.Select(entity => entity.ToDto(mapper));
         }

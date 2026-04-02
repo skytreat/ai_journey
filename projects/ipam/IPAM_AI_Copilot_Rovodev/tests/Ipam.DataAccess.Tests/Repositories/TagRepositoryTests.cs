@@ -9,23 +9,23 @@ using Ipam.DataAccess.Tests.TestHelpers;
 
 namespace Ipam.DataAccess.Tests.Repositories
 {
-    public class TagRepositoryTests : RepositoryTestBase<TagRepository, TagEntity>
+    public class TagRepositoryTests : RepositoryTestBase<TagRepository, OptimizedTagEntity>
     {
         protected override TagRepository CreateRepository()
         {
             return new TagRepository(ConfigMock.Object);
         }
 
-        protected override TagEntity CreateTestEntity()
+        protected override OptimizedTagEntity CreateTestEntity()
         {
-            return TestDataBuilders.CreateTestTagEntity();
+            return TestDataBuilders.CreateTestOptimizedTagEntity();
         }
 
         [Fact]
         public async Task CreateAsync_ValidTag_ShouldSucceed()
         {
             // Arrange
-            var tag = TestDataBuilders.CreateTestTagEntity(
+            var tag = TestDataBuilders.CreateTestOptimizedTagEntity(
                 TestConstants.DefaultAddressSpaceId,
                 "Region",
                 "Inheritable",
@@ -44,7 +44,7 @@ namespace Ipam.DataAccess.Tests.Repositories
         public async Task CreateAsync_CyclicImplication_ShouldThrowValidationException()
         {
             // Arrange
-            var tag = new TagEntity
+            var tag = new OptimizedTagEntity
             {
                 PartitionKey = "space1",
                 RowKey = "Tag1",
@@ -55,7 +55,7 @@ namespace Ipam.DataAccess.Tests.Repositories
                 }
             };
 
-            var tag2 = new TagEntity
+            var tag2 = new OptimizedTagEntity
             {
                 PartitionKey = "space1",
                 RowKey = "Tag2",
