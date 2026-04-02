@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch FundRecommendationAPI",
+            "type": "clr",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/FundRecommendationAPI/bin/Debug/net9.0/FundRecommendationAPI.dll",
+            "args": ["--urls", "http://localhost:5000"],
+            "cwd": "${workspaceFolder}/backend/FundRecommendationAPI",
+            "stopAtEntry": true,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}
