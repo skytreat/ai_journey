@@ -15,6 +15,9 @@ import random
 import pickle
 import logging
 import math
+import gc
+import signal
+import functools
 from datetime import datetime, timedelta, date
 from typing import Optional, Dict, List, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -87,10 +90,45 @@ try:
 except ImportError:
     logger.warning("akshare not installed, using mock data")
 
-CACHE_EXPIRY_YEAR = 365 * 24 * 3600
+CACHE_EXPIRY_LIST = 1 * 3600
+CACHE_EXPIRY_BASIC_INFO = 365 * 24 * 3600
+CACHE_EXPIRY_HISTORICAL_NAV = 2 * 365 * 24 * 3600
+CACHE_EXPIRY_CURRENT_YEAR_NAV = 1 * 3600
 CACHE_EXPIRY_DAY = 24 * 3600
 
 UPDATE_LOCK_FILE = os.path.join(SCRIPT_DIR, ".update_lock")
+UPDATE_LOCK_TIMEOUT = 3600
+
+_lock_acquired = False
+
+
+def _signal_handler(signum, frame):
+    global _lock_acquired
+    if _lock_acquired:
+        logger.warning(f"Received signal {signum}, releasing lock before exit")
+        release_update_lock()
+    sys.exit(1)
+
+
+def _register_signal_handlers():
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
+
+def _is_lock_stale() -> bool:
+    if not os.path.exists(UPDATE_LOCK_FILE):
+        return False
+    try:
+        with open(UPDATE_LOCK_FILE, "r") as f:
+            content = f.read().strip()
+            if "|" in content:
+                _, timestamp_str = content.split("|", 1)
+                lock_time = float(timestamp_str)
+                if time.time() - lock_time > UPDATE_LOCK_TIMEOUT:
+                    return True
+    except Exception:
+        pass
+    return False
 
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 1
@@ -113,7 +151,7 @@ def get_cache_key(prefix: str, *args) -> str:
     return "_".join(key_parts)
 
 
-def get_cache(file_name: str, use_pickle: bool = True) -> Optional[Any]:
+def get_cache(file_name: str, use_pickle: bool = True, cache_expiry: int = None) -> Optional[Any]:
     cache_file = os.path.join(CACHE_DIR, file_name)
     if use_pickle:
         pkl_file = cache_file + ".pkl"
@@ -126,7 +164,8 @@ def get_cache(file_name: str, use_pickle: bool = True) -> Optional[Any]:
 
     try:
         mtime = os.path.getmtime(cache_file)
-        if time.time() - mtime > CACHE_EXPIRY_DAY:
+        expiry = cache_expiry if cache_expiry is not None else CACHE_EXPIRY_DAY
+        if time.time() - mtime > expiry:
             os.remove(cache_file)
             return None
 
@@ -141,7 +180,7 @@ def get_cache(file_name: str, use_pickle: bool = True) -> Optional[Any]:
         return None
 
 
-def set_cache(file_name: str, data: Any, use_pickle: bool = True) -> bool:
+def set_cache(file_name: str, data: Any, use_pickle: bool = True, cache_expiry: int = None) -> bool:
     cache_file = os.path.join(CACHE_DIR, file_name)
     if use_pickle:
         cache_file = cache_file + ".pkl"
@@ -182,10 +221,18 @@ def clear_expired_cache() -> None:
 
 
 @contextmanager
-def get_db_connection(db_path: str = DATABASE_PATH):
+def get_db_connection(db_path: str = DATABASE_PATH, optimize: bool = False):
     conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
     conn.execute("PRAGMA busy_timeout = 30000")
     conn.row_factory = sqlite3.Row
+
+    if optimize:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=-1048576")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        conn.execute("PRAGMA mmap_size=268435456")
+
     try:
         yield conn
     finally:
@@ -193,7 +240,16 @@ def get_db_connection(db_path: str = DATABASE_PATH):
 
 
 def acquire_update_lock(timeout: int = 1800) -> bool:
+    global _lock_acquired
     start_time = time.time()
+
+    if _is_lock_stale():
+        logger.warning("Removing stale lock file")
+        try:
+            os.remove(UPDATE_LOCK_FILE)
+        except Exception as e:
+            logger.error(f"Error removing stale lock: {e}")
+
     while os.path.exists(UPDATE_LOCK_FILE):
         if time.time() - start_time > timeout:
             logger.error("Update lock timeout")
@@ -202,6 +258,8 @@ def acquire_update_lock(timeout: int = 1800) -> bool:
     try:
         with open(UPDATE_LOCK_FILE, "w") as f:
             f.write(f"{os.getpid()}|{time.time()}")
+        _lock_acquired = True
+        _register_signal_handlers()
         return True
     except Exception as e:
         logger.error(f"Error acquiring lock: {e}")
@@ -209,9 +267,11 @@ def acquire_update_lock(timeout: int = 1800) -> bool:
 
 
 def release_update_lock() -> None:
+    global _lock_acquired
     try:
         if os.path.exists(UPDATE_LOCK_FILE):
             os.remove(UPDATE_LOCK_FILE)
+        _lock_acquired = False
     except Exception as e:
         logger.error(f"Error releasing lock: {e}")
 
@@ -398,6 +458,7 @@ def create_database(db_path: str = DATABASE_PATH) -> bool:
 
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_basic_info_type ON fund_basic_info(基金类型)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_basic_info_manager ON fund_basic_info(基金管理人)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_basic_info_main_code ON fund_basic_info(主基金代码)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_nav_history_code_date ON fund_nav_history(代码, 日期)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_nav_history_date ON fund_nav_history(日期)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_corporate_actions_code_date ON fund_corporate_actions(代码, 除权日期)")
@@ -409,7 +470,10 @@ def create_database(db_path: str = DATABASE_PATH) -> bool:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_performance_code_period ON fund_performance(代码, 周期类型)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_performance_period_code ON fund_performance(周期类型, 代码, 净值增长率)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_manager_code ON fund_manager(代码)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_manager_name_date ON fund_manager(基金经理姓名, 任职开始日期)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_asset_scale_code_date ON fund_asset_scale(代码, 日期)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_purchase_status_code_date ON fund_purchase_status(代码, 日期)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_redemption_status_code_date ON fund_redemption_status(代码, 日期)")
 
             conn.commit()
             logger.info("Database created successfully")
@@ -459,7 +523,7 @@ def repair_database(db_path: str = DATABASE_PATH) -> bool:
         return False
 
 
-def get_all_fund_codes(db_path: str = DATABASE_PATH) -> List[str]:
+def get_all_fund_codes_fromDb(db_path: str = DATABASE_PATH) -> List[str]:
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
@@ -470,7 +534,8 @@ def get_all_fund_codes(db_path: str = DATABASE_PATH) -> List[str]:
         return []
 
 
-def get_fund_establishment_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[datetime]:
+@functools.lru_cache(maxsize=5000)
+def _cached_get_establishment_date(fund_code: str, db_path: str) -> Optional[datetime]:
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
@@ -484,6 +549,10 @@ def get_fund_establishment_date(fund_code: str, db_path: str = DATABASE_PATH) ->
     except Exception as e:
         logger.error(f"Error getting fund establishment date: {e}")
         return None
+
+
+def get_fund_establishment_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[datetime]:
+    return _cached_get_establishment_date(fund_code, db_path)
 
 
 def get_latest_nav_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[str]:
@@ -532,7 +601,7 @@ def fetch_fund_list_from_akshare(use_cache: bool = True, limit: int = None, only
         return default_list[:limit] if limit else default_list
 
     try:
-        time.sleep(random.uniform(0.5, 1.5))
+        time.sleep(random.uniform(0.1, 0.3))
         fund_df = ak.fund_open_fund_daily_em()
         fund_codes = fund_df["基金代码"].tolist()
         logger.info(f"Fetched {len(fund_codes)} fund codes from akshare")
@@ -546,13 +615,13 @@ def fetch_fund_list_from_akshare(use_cache: bool = True, limit: int = None, only
             fund_codes = filtered
             logger.info(f"Filtered to {len(fund_codes)} A-share funds")
 
-        if use_cache and fund_codes:
-            set_cache(cache_key, fund_codes, use_pickle=True)
+        if fund_codes:
+            set_cache(cache_key, fund_codes, use_pickle=True, cache_expiry=CACHE_EXPIRY_LIST)
 
         return fund_codes[:limit] if limit else fund_codes
     except Exception as e:
         logger.error(f"Error fetching fund list: {e}")
-        cached_data = get_cache(cache_key, use_pickle=True)
+        cached_data = get_cache(cache_key, use_pickle=True, cache_expiry=CACHE_EXPIRY_LIST)
         if cached_data:
             logger.info(f"Using cached fund list after error, {len(cached_data)} funds")
             return cached_data[:limit] if limit else cached_data
@@ -599,7 +668,7 @@ def find_main_fund_code(fund_name: str, db_path: str = DATABASE_PATH) -> Optiona
 def fetch_fund_basic_info(fund_code: str, db_path: str = DATABASE_PATH, use_cache: bool = True) -> Optional[Dict[str, Any]]:
     cache_key = get_cache_key("basic", fund_code)
     if use_cache:
-        cached_data = get_cache(cache_key)
+        cached_data = get_cache(cache_key, cache_expiry=CACHE_EXPIRY_BASIC_INFO)
         if cached_data:
             return cached_data
 
@@ -608,7 +677,7 @@ def fetch_fund_basic_info(fund_code: str, db_path: str = DATABASE_PATH, use_cach
         return None
 
     try:
-        time.sleep(random.uniform(0.3, 1.0))
+        time.sleep(random.uniform(0.05, 0.15))
         fund_overview = ak.fund_overview_em(symbol=fund_code)
         if fund_overview.empty:
             return None
@@ -661,73 +730,113 @@ def fetch_fund_basic_info(fund_code: str, db_path: str = DATABASE_PATH, use_cach
             main_fund_code = find_main_fund_code(fund_name, db_path)
             data["主基金代码"] = main_fund_code
 
-        set_cache(cache_key, data)
+        set_cache(cache_key, data, cache_expiry=CACHE_EXPIRY_BASIC_INFO)
         return data
     except Exception as e:
         logger.error(f"Error fetching basic info for {fund_code}: {e}")
         return None
 
 
-def fetch_fund_nav_history(fund_code: str, start_date: str, end_date: str, fund_start_date: datetime = None) -> List[Dict[str, Any]]:
+def fetch_fund_nav_history(fund_code: str, start_date: str, end_date: str, fund_start_date: datetime = None, use_cache: bool = True, db_path: str = DATABASE_PATH) -> List[Dict[str, Any]]:
     if not AKSHARE_AVAILABLE:
         logger.warning("akshare not available, using mock nav history")
         return generate_mock_nav_history(fund_code, start_date, end_date)
 
     try:
-        if start_date:
-            start_year = int(start_date.split("-")[0])
-            end_year = int(end_date.split("-")[0])
-            all_data = []
+        all_data = fetch_full_nav_history(fund_code, use_cache)
 
-            for year in range(start_year, end_year + 1):
-                year_data = fetch_nav_for_year(fund_code, year)
-                all_data.extend(year_data)
+        if not all_data:
+            return generate_mock_nav_history(fund_code, start_date, end_date)
 
-            if not all_data:
-                return generate_mock_nav_history(fund_code, start_date, end_date)
+        filtered_data = all_data
+        if start_date and end_date:
+            filtered_data = [item for item in all_data if start_date <= item["日期"] <= end_date]
+        elif start_date:
+            filtered_data = [item for item in all_data if item["日期"] >= start_date]
+        elif end_date:
+            filtered_data = [item for item in all_data if item["日期"] <= end_date]
 
-            filtered_data = [
-                item for item in all_data
-                if start_date <= item["日期"] <= end_date
-            ]
-
-            return filtered_data
-        else:
-            start_year = 2000
-            if not fund_start_date:
-                fund_start_date = get_fund_establishment_date(fund_code)
-            if fund_start_date:
-                start_year = fund_start_date.year
-
-            current_year = datetime.now().year
-            all_data = []
-
-            for year in range(start_year, current_year + 1):
-                year_data = fetch_nav_for_year(fund_code, year)
-                all_data.extend(year_data)
-
-            if not all_data:
-                return generate_mock_nav_history(fund_code, start_date, end_date)
-
-            filtered_data = [
-                item for item in all_data
-                if item["日期"] <= end_date
-            ]
-            return filtered_data
+        return filtered_data
     except Exception as e:
         logger.error(f"Error fetching nav history for {fund_code}: {e}")
         return generate_mock_nav_history(fund_code, start_date, end_date)
 
 
-def fetch_nav_for_year(fund_code: str, year: int) -> List[Dict[str, Any]]:
-    cache_key = get_cache_key("nav_year", fund_code, str(year))
-    cached_data = get_cache(cache_key, use_pickle=True)
-    if cached_data:
-        return cached_data
+def fetch_full_nav_history(fund_code: str, use_cache: bool = True) -> List[Dict[str, Any]]:
+    cache_key = get_cache_key("nav_full", fund_code)
+    cache_expiry = CACHE_EXPIRY_CURRENT_YEAR_NAV
+
+    if use_cache:
+        cached_data = get_cache(cache_key, use_pickle=True, cache_expiry=cache_expiry)
+        if cached_data:
+            return cached_data
 
     try:
-        time.sleep(random.uniform(0.5, 2.0))
+        time.sleep(random.uniform(0.1, 0.2))
         nav_df = ak.fund_open_fund_info_em(symbol=fund_code, indicator="单位净值走势")
+        time.sleep(random.uniform(0.1, 0.2))
+        accum_df = ak.fund_open_fund_info_em(symbol=fund_code, indicator="累计净值走势")
+
+        if nav_df.empty or accum_df.empty:
+            return []
+
+        nav_df = nav_df.rename(columns={"净值日期": "date", "单位净值": "nav", "日增长率": "daily_return"})
+        accum_df = accum_df.rename(columns={"净值日期": "date", "累计净值": "accumulated_nav"})
+
+        df = pd.merge(nav_df, accum_df, on="date", how="inner")
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date").reset_index(drop=True)
+
+        if df.empty:
+            return []
+
+        df["daily_return"] = df["daily_return"].fillna(0)
+
+        # akshare返回的日增长率是*100的结果
+        df["daily_return"] = df["daily_return"] / 100
+
+        full_data = []
+        for _, row in df.iterrows():
+            daily_return = row["daily_return"]
+            full_data.append({
+                "代码": fund_code,
+                "日期": row["date"].strftime("%Y-%m-%d"),
+                "单位净值": round(row["nav"], 4),
+                "累计净值": round(row["accumulated_nav"], 4),
+                "日增长率": round(daily_return, 6) if not pd.isna(daily_return) else 0,
+                "更新日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        if full_data:
+            set_cache(cache_key, full_data, use_pickle=True, cache_expiry=cache_expiry)
+
+        return full_data
+    except Exception as e:
+        logger.error(f"Error fetching full nav for {fund_code}: {e}")
+        return []
+
+
+def fetch_nav_for_year(fund_code: str, year: int, use_cache: bool = True) -> List[Dict[str, Any]]:
+    cache_key = get_cache_key("nav_year", fund_code, str(year))
+    cache_expiry = CACHE_EXPIRY_CURRENT_YEAR_NAV if year == datetime.now().year else CACHE_EXPIRY_HISTORICAL_NAV
+
+    if use_cache:
+        cached_data = get_cache(cache_key, use_pickle=True, cache_expiry=cache_expiry)
+        if cached_data:
+            return cached_data
+
+    full_cache_key = get_cache_key("nav_full", fund_code)
+    full_cached = get_cache(full_cache_key, use_pickle=True, cache_expiry=CACHE_EXPIRY_CURRENT_YEAR_NAV)
+    if full_cached:
+        year_data = [item for item in full_cached if item["日期"].startswith(str(year))]
+        if year_data:
+            set_cache(cache_key, year_data, use_pickle=True, cache_expiry=cache_expiry)
+            return year_data
+
+    try:
+        time.sleep(random.uniform(0.1, 0.2))
+        nav_df = ak.fund_open_fund_info_em(symbol=fund_code, indicator="单位净值走势")
+        time.sleep(random.uniform(0.1, 0.2))
         accum_df = ak.fund_open_fund_info_em(symbol=fund_code, indicator="累计净值走势")
 
         if nav_df.empty or accum_df.empty:
@@ -747,6 +856,9 @@ def fetch_nav_for_year(fund_code: str, year: int) -> List[Dict[str, Any]]:
 
         df["daily_return"] = df["daily_return"].fillna(0)
 
+        # akshare返回的日增长率是*100的结果
+        df["daily_return"] = df["daily_return"] / 100
+
         year_data = []
         for _, row in df.iterrows():
             daily_return = row["daily_return"]
@@ -755,12 +867,13 @@ def fetch_nav_for_year(fund_code: str, year: int) -> List[Dict[str, Any]]:
                 "日期": row["date"].strftime("%Y-%m-%d"),
                 "单位净值": round(row["nav"], 4),
                 "累计净值": round(row["accumulated_nav"], 4),
-                "日增长率": round(daily_return, 4) if not pd.isna(daily_return) else 0,
+                "日增长率": round(daily_return, 6) if not pd.isna(daily_return) else 0,
                 "更新日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
 
         if year_data:
-            set_cache(cache_key, year_data, use_pickle=True)
+            cache_expiry = CACHE_EXPIRY_CURRENT_YEAR_NAV if year == datetime.now().year else CACHE_EXPIRY_HISTORICAL_NAV
+            set_cache(cache_key, year_data, use_pickle=True, cache_expiry=cache_expiry)
 
         return year_data
     except Exception as e:
@@ -770,9 +883,19 @@ def fetch_nav_for_year(fund_code: str, year: int) -> List[Dict[str, Any]]:
 
 def generate_mock_nav_history(fund_code: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
     try:
-        start = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+        if end_date is None:
+            end = datetime.now()
+        else:
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if start_date is None:
+            start = end - timedelta(days=365)
+        else:
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+
         days = (end - start).days + 1
+        if days <= 0:
+            days = 1
 
         data = []
         nav = 1.0
@@ -807,7 +930,7 @@ def fetch_corporate_actions(fund_code: str, start_date: str = None, end_date: st
         return generate_mock_corporate_actions(fund_code)
 
     try:
-        time.sleep(random.uniform(0.3, 1.0))
+        time.sleep(random.uniform(0.05, 0.1))
         actions_df = ak.fund_open_fund_info_em(symbol=fund_code, indicator="分红送配详情")
         if actions_df.empty:
             return generate_mock_corporate_actions(fund_code)
@@ -1051,20 +1174,23 @@ def fetch_fund_performance(
     db_path: str = DATABASE_PATH,
     is_first_insert: bool = False,
     fund_start_date: datetime = None,
-    use_cache: bool = True
+    use_cache: bool = True,
+    nav_data: List[Dict[str, Any]] = None
 ) -> List[Dict[str, Any]]:
     cache_key = get_cache_key("performance", fund_code)
-    if use_cache:        
+    if use_cache and nav_data is None:
         cached_data = get_cache(cache_key)
         if cached_data:
             return cached_data
 
-    # 优化建议:
-    # 1. 在 get_nav_history_from_db 查询时限制日期范围，只获取计算所需的最近10年数据
-    #    避免加载基金全部历史净值（如2000年成立可能有5000+条记录）
-    # 2. 将 nav_data 转换为 DataFrame 后按日期排序一次，避免在 calculate_period_performance 中重复处理
-    # 3. 历史年份业绩计算时分批处理，避免一次性计算所有年份造成内存压力
-    nav_data = get_nav_history_from_db(fund_code, db_path)
+    if nav_data is None:
+        # 优化建议:
+        # 1. 在 get_nav_history_from_db 查询时限制日期范围，只获取计算所需的最近10年数据
+        #    避免加载基金全部历史净值（如2000年成立可能有5000+条记录）
+        # 2. 将 nav_data 转换为 DataFrame 后按日期排序一次，避免在 calculate_period_performance 中重复处理
+        # 3. 历史年份业绩计算时分批处理，避免一次性计算所有年份造成内存压力
+        nav_data = get_nav_history_from_db(fund_code, db_path)
+
     if not nav_data or len(nav_data) < 2:
         return generate_mock_performance(fund_code)
 
@@ -1277,7 +1403,7 @@ def _fetch_purchase_em_data(fund_code: str) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        time.sleep(random.uniform(0.5, 1.5))
+        time.sleep(random.uniform(0.1, 0.2))
         df = ak.fund_purchase_em()
 
         fund_data = df[df["基金代码"] == fund_code]
@@ -1312,7 +1438,7 @@ def _fetch_redemption_fee_data(fund_code: str) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        time.sleep(random.uniform(0.3, 0.8))
+        time.sleep(random.uniform(0.05, 0.1))
         df = ak.fund_fee_em(symbol=fund_code, indicator="赎回费率")
         if df is None or df.empty:
             return None
@@ -1440,23 +1566,27 @@ def batch_get_fund_info(fund_codes: List[str], db_path: str = DATABASE_PATH) -> 
             cursor = conn.cursor()
             placeholders = ",".join(["?"] * len(fund_codes))
 
+            # 基金成立日期和份额
             cursor.execute(f"""
-                SELECT 代码, 成立日期
+                SELECT 代码, 成立日期, 份额类型
                 FROM fund_basic_info
                 WHERE 代码 IN ({placeholders})
             """, fund_codes)
             establishment_dates = {}
+            share_types = {}
             for row in cursor.fetchall():
-                code, est_date = row[0], row[1]
+                code, est_date, share_type = row[0], row[1], row[2]
+                share_types[code] = share_type
+                parsed_date = None
                 if est_date:
                     try:
                         date_str = str(est_date).replace("年", "-").replace("月", "-").replace("日", "")[:10]
-                        establishment_dates[code] = datetime.strptime(date_str, "%Y-%m-%d")
+                        parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
                     except:
-                        establishment_dates[code] = None
-                else:
-                    establishment_dates[code] = None
+                        parsed_date = None
+                establishment_dates[code] = parsed_date
 
+            # 最新净值日期
             cursor.execute(f"""
                 SELECT 代码, MAX(日期) as latest_date
                 FROM fund_nav_history
@@ -1465,6 +1595,7 @@ def batch_get_fund_info(fund_codes: List[str], db_path: str = DATABASE_PATH) -> 
             """, fund_codes)
             latest_nav_dates = {row[0]: row[1] for row in cursor.fetchall()}
 
+            # 基金绩效记录
             cursor.execute(f"""
                 SELECT 代码, 周期类型, 周期值
                 FROM fund_performance
@@ -1484,12 +1615,13 @@ def batch_get_fund_info(fund_codes: List[str], db_path: str = DATABASE_PATH) -> 
                     "establishment_date": establishment_dates.get(code),
                     "latest_nav_date": latest_nav_dates.get(code),
                     "performance_records": perf_by_fund.get(code, []),
-                    "current_year": current_year
+                    "current_year": current_year,
+                    "share_type": share_types.get(code)
                 }
             return result
     except Exception as e:
         logger.error(f"Error batch getting fund info: {e}")
-        return {code: {"establishment_date": None, "latest_nav_date": None, "performance_records": [], "current_year": datetime.now().year} for code in fund_codes}
+        return {code: {"establishment_date": None, "latest_nav_date": None, "performance_records": [], "current_year": datetime.now().year, "share_type": None} for code in fund_codes}
 
 
 def get_latest_manager_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[str]:
@@ -1639,6 +1771,20 @@ def validate_date_format(date_str: str) -> bool:
         return True
     except (ValueError, TypeError):
         return False
+
+
+@functools.lru_cache(maxsize=10000)
+def _cached_parse_date(date_str: str) -> Optional[datetime]:
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_date(date_str: Optional[str]) -> Optional[datetime]:
+    if not date_str:
+        return None
+    return _cached_parse_date(str(date_str))
 
 
 def validate_nav_data(nav_data: Dict[str, Any]) -> Tuple[bool, str]:
@@ -1873,45 +2019,78 @@ def save_basic_info(fund_data: Dict[str, Any], db_path: str = DATABASE_PATH) -> 
         return False
 
 
+def save_basic_info_batch(fund_data_list: List[Dict[str, Any]], db_path: str = DATABASE_PATH) -> int:
+    if not fund_data_list:
+        return 0
+
+    try:
+        with get_db_connection(db_path, optimize=True) as conn:
+            cursor = conn.cursor()
+
+            params = [
+                (
+                    data.get("代码"), data.get("名称"), data.get("基金类型"),
+                    data.get("基金子类型"), data.get("份额类型"), data.get("主基金代码"),
+                    data.get("成立日期"), data.get("上市日期"), data.get("基金管理人"),
+                    data.get("基金托管人"), data.get("管理费率"), data.get("托管费率"),
+                    data.get("销售服务费率"), data.get("业绩比较基准"), data.get("跟踪标的"),
+                    data.get("投资风格"), data.get("风险等级"), data.get("更新日期")
+                )
+                for data in fund_data_list
+            ]
+
+            cursor.executemany("""
+                INSERT OR IGNORE INTO fund_basic_info (
+                    代码, 名称, 基金类型, 基金子类型, 份额类型, 主基金代码, 成立日期, 上市日期,
+                    基金管理人, 基金托管人, 管理费率, 托管费率, 销售服务费率,
+                    业绩比较基准, 跟踪标的, 投资风格, 风险等级, 更新日期
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, params)
+
+            conn.commit()
+            return cursor.rowcount
+
+    except Exception as e:
+        logger.error(f"Error saving basic info batch: {e}")
+        return 0
+
+
 def save_nav_history(nav_data_list: List[Dict[str, Any]], db_path: str = DATABASE_PATH) -> int:
     if not nav_data_list:
         return 0
 
     try:
-        with get_db_connection(db_path) as conn:
+        with get_db_connection(db_path, optimize=True) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT 代码 || '-' || 日期 FROM fund_nav_history")
-            existing = set(cursor.fetchall())
 
-            count = 0
+            valid_data = []
             for nav_data in nav_data_list:
-                fund_code = nav_data.get("代码")
-                date = nav_data.get("日期")
-                if not fund_code or not date:
-                    continue
-
-                key = f"{fund_code}-{date}"
-                if key in existing:
-                    continue
-
                 is_valid, error_msg = validate_nav_data(nav_data)
                 if not is_valid:
                     logger.warning(f"Skipping invalid nav data: {error_msg}")
                     continue
+                valid_data.append(nav_data)
 
-                cursor.execute("""
-                    INSERT INTO fund_nav_history (
-                        代码, 日期, 单位净值, 累计净值, 日增长率, 更新日期
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    fund_code, date,
-                    nav_data.get("单位净值"), nav_data.get("累计净值"),
-                    nav_data.get("日增长率"), nav_data.get("更新日期")
-                ))
-                count += 1
-                existing.add(key)
+            if not valid_data:
+                return 0
+
+            params = [
+                (
+                    d.get("代码"), d.get("日期"),
+                    d.get("单位净值"), d.get("累计净值"),
+                    d.get("日增长率"), d.get("更新日期")
+                )
+                for d in valid_data
+            ]
+
+            cursor.executemany("""
+                INSERT OR REPLACE INTO fund_nav_history (
+                    代码, 日期, 单位净值, 累计净值, 日增长率, 更新日期
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, params)
+
             conn.commit()
-            return count
+            return cursor.rowcount
     except Exception as e:
         logger.error(f"Error saving nav history: {e}")
         return 0
@@ -1921,37 +2100,46 @@ def save_performance(performance_data_list: List[Dict[str, Any]], db_path: str =
     if not performance_data_list:
         return 0
 
-    count = 0
     try:
-        with get_db_connection(db_path) as conn:
+        with get_db_connection(db_path, optimize=True) as conn:
             cursor = conn.cursor()
+
+            valid_data = []
             for perf_data in performance_data_list:
                 is_valid, error_msg = validate_performance_data(perf_data)
                 if not is_valid:
                     logger.warning(f"Skipping invalid performance data: {error_msg}")
                     continue
+                valid_data.append(perf_data)
 
-                cursor.execute("""
-                    INSERT OR REPLACE INTO fund_performance (
-                        代码, 周期类型, 周期值, 净值增长率, 最大回撤, 下行标准差,
-                        夏普比率, 索提诺比率, 卡玛比率, 年化收益率, 波动率,
-                        同类型基金排名, 同类型基金总数, 更新日期
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    perf_data.get("代码"), perf_data.get("周期类型"), perf_data.get("周期值"),
-                    perf_data.get("净值增长率"), perf_data.get("最大回撤"), perf_data.get("下行标准差"),
-                    perf_data.get("夏普比率"), perf_data.get("索提诺比率"), perf_data.get("卡玛比率"),
-                    perf_data.get("年化收益率"), perf_data.get("波动率"),
-                    perf_data.get("同类型基金排名"), perf_data.get("同类型基金总数"),
-                    perf_data.get("更新日期")
-                ))
-                if cursor.rowcount > 0:
-                    count += 1
+            if not valid_data:
+                return 0
+
+            params = [
+                (
+                    d.get("代码"), d.get("周期类型"), d.get("周期值"),
+                    d.get("净值增长率"), d.get("最大回撤"), d.get("下行标准差"),
+                    d.get("夏普比率"), d.get("索提诺比率"), d.get("卡玛比率"),
+                    d.get("年化收益率"), d.get("波动率"),
+                    d.get("同类型基金排名"), d.get("同类型基金总数"),
+                    d.get("更新日期")
+                )
+                for d in valid_data
+            ]
+
+            cursor.executemany("""
+                INSERT OR REPLACE INTO fund_performance (
+                    代码, 周期类型, 周期值, 净值增长率, 最大回撤, 下行标准差,
+                    夏普比率, 索提诺比率, 卡玛比率, 年化收益率, 波动率,
+                    同类型基金排名, 同类型基金总数, 更新日期
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, params)
+
             conn.commit()
-            return count
+            return cursor.rowcount
     except Exception as e:
         logger.error(f"Error saving performance: {e}")
-        return count
+        return 0
 
 
 def save_corporate_actions(actions_data_list: List[Dict[str, Any]], db_path: str = DATABASE_PATH) -> int:
@@ -2204,23 +2392,12 @@ def record_update_history(
         return False
 
 
-def update_single_fund(fund_code: str, start_date: str = None, end_date: str = None, db_path: str = DATABASE_PATH, use_cache: bool = True) -> Tuple[int, int]:
+def recalculate_performance_only(fund_code: str, db_path: str = DATABASE_PATH) -> Tuple[int, int]:
     if not fund_code or not isinstance(fund_code, str):
         logger.error(f"Invalid fund_code: {fund_code}")
         return 0, 0
 
     fund_code = fund_code.strip()
-
-    if not end_date:
-        end_date = datetime.now().strftime("%Y-%m-%d")
-
-    if not validate_date_format(end_date):
-        logger.error(f"Invalid end_date format: {end_date}")
-        return 0, 0
-
-    if start_date and not validate_date_format(start_date):
-        logger.error(f"Invalid start_date format: {start_date}")
-        return 0, 0
 
     if not os.path.exists(db_path):
         logger.error(f"Database does not exist: {db_path}")
@@ -2230,27 +2407,113 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
     new_records = 0
 
     try:
+        nav_data = get_nav_history_from_db(fund_code, db_path)
+        if not nav_data or len(nav_data) < 2:
+            logger.warning(f"No nav data for fund {fund_code}")
+            return 0, 0
+
         existing_basic = get_basic_info_from_db(fund_code, db_path)
-        if not existing_basic:
-            existing_basic = fetch_fund_basic_info(fund_code, db_path, use_cache=use_cache)
-            if existing_basic:
-                if save_basic_info(existing_basic, db_path):
-                    total_records += 1
-                    new_records += 1
-                    logger.info(f"Saved basic info for fund {fund_code}")
-        elif not start_date:
-            logger.info(f"Fund {fund_code} already exists in database, checking for updates")
-
-        share_type = existing_basic.get("份额类型") if existing_basic else None
-
+        fund_start_date = None
         if existing_basic and existing_basic.get("成立日期"):
             try:
                 date_str = str(existing_basic["成立日期"]).replace("年", "-").replace("月", "-").replace("日", "")[:10]
                 fund_start_date = datetime.strptime(date_str, "%Y-%m-%d")
             except:
-                fund_start_date = get_fund_establishment_date(fund_code, db_path)
-        else:
+                pass
+
+        if not fund_start_date:
             fund_start_date = get_fund_establishment_date(fund_code, db_path)
+
+        df = pd.DataFrame(nav_data)
+        df["日期"] = pd.to_datetime(df["日期"])
+        has_data = len(df) > 0
+
+        with get_db_connection(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM fund_performance WHERE 代码 = ?", (fund_code,))
+            conn.commit()
+        logger.info(f"Deleted existing performance data for fund {fund_code}")
+
+        performance = fetch_fund_performance(
+            fund_code, db_path,
+            is_first_insert=True,
+            fund_start_date=fund_start_date,
+            use_cache=False
+        )
+
+        if performance:
+            saved_count = save_performance(performance, db_path)
+            total_records += saved_count
+            new_records += saved_count
+            logger.info(f"Saved performance data for fund {fund_code}: {saved_count} records")
+
+    except Exception as e:
+        logger.error(f"Error in recalculate_performance_only for fund {fund_code}: {e}")
+
+    return total_records, new_records
+
+
+def update_single_fund(fund_code: str, start_date: str = None, end_date: str = None, db_path: str = DATABASE_PATH, use_cache: bool = True, skip_perf_save: bool = False, fund_info: Dict[str, Any] = None) -> Tuple[int, int, List[Dict[str, Any]]]:
+    if not fund_code or not isinstance(fund_code, str):
+        logger.error(f"Invalid fund_code: {fund_code}")
+        return 0, 0, []
+
+    fund_code = fund_code.strip()
+
+    if not end_date:
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
+    if not validate_date_format(end_date):
+        logger.error(f"Invalid end_date format: {end_date}")
+        return 0, 0, []
+
+    if start_date and not validate_date_format(start_date):
+        logger.error(f"Invalid start_date format: {start_date}")
+        return 0, 0, []
+
+    if not os.path.exists(db_path):
+        logger.error(f"Database does not exist: {db_path}")
+        return 0, 0, []
+
+    total_records = 0
+    new_records = 0
+    performance_list = []
+
+    try:
+        share_type = None
+        if fund_info and fund_info.get("share_type"):
+            share_type = fund_info.get("share_type")
+
+        existing_basic = None
+        if share_type is None and not start_date:
+            existing_basic = get_basic_info_from_db(fund_code, db_path)
+            if existing_basic:
+                share_type = existing_basic.get("份额类型")
+
+        if not share_type and not start_date:
+            existing_basic = fetch_fund_basic_info(fund_code, db_path, use_cache=use_cache)
+            if existing_basic:
+                share_type = existing_basic.get("份额类型")
+                if save_basic_info(existing_basic, db_path):
+                    total_records += 1
+                    new_records += 1
+                    logger.info(f"Saved basic info for fund {fund_code}")
+
+        if share_type and not start_date:
+            logger.info(f"Fund {fund_code} already exists in database, checking for updates")
+
+        fund_start_date = None
+        if fund_info and fund_info.get("establishment_date"):
+            fund_start_date = fund_info.get("establishment_date")
+        elif not start_date:
+            if existing_basic and existing_basic.get("成立日期"):
+                try:
+                    date_str = str(existing_basic["成立日期"]).replace("年", "-").replace("月", "-").replace("日", "")[:10]
+                    fund_start_date = datetime.strptime(date_str, "%Y-%m-%d")
+                except:
+                    fund_start_date = get_fund_establishment_date(fund_code, db_path)
+            else:
+                fund_start_date = get_fund_establishment_date(fund_code, db_path)
 
         nav_updated = False
 
@@ -2266,7 +2529,10 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
         fetch_kwargs = {}
         if fund_start_date:
             fetch_kwargs["fund_start_date"] = fund_start_date
+        fetch_kwargs["db_path"] = db_path
+        fetch_kwargs["use_cache"] = True
 
+        nav_data = None
         for table_name, get_latest_fn, fetch_fn, save_fn in table_update_handlers:
             try:
                 latest_date = get_latest_fn(fund_code, db_path)
@@ -2283,6 +2549,7 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
                     new_records += saved_count
                     if table_name == "fund_nav_history":
                         nav_updated = True
+                        nav_data = data
                     logger.info(f"Updated {table_name} for fund {fund_code}: {saved_count} records")
                 else:
                     logger.debug(f"No {table_name} data returned for fund {fund_code}")
@@ -2297,58 +2564,46 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
                 needs_recalc = nav_updated or not is_complete
                 if is_first or needs_recalc:
                     performance = fetch_fund_performance(
-                        fund_code, db_path, 
-                        is_first_insert=is_first, 
-                        fund_start_date=fund_start_date, 
-                        use_cache=False
+                        fund_code, db_path,
+                        is_first_insert=is_first,
+                        fund_start_date=fund_start_date,
+                        use_cache=False,
+                        nav_data=nav_data
                     )
                     if performance:
-                        saved_count = save_performance(performance, db_path)
-                        total_records += saved_count
-                        new_records += saved_count
-                        logger.info(f"Saved performance data for fund {fund_code}: {saved_count} records")
+                        if skip_perf_save:
+                            performance_list.extend(performance)
+                        else:
+                            saved_count = save_performance(performance, db_path)
+                            total_records += saved_count
+                            new_records += saved_count
+                            logger.info(f"Saved performance data for fund {fund_code}: {saved_count} records")
             except Exception as e:
                 logger.error(f"Error calculating performance for fund {fund_code}: {e}")
 
     except Exception as e:
         logger.error(f"Error in update_single_fund for fund {fund_code}: {e}")
-        return total_records, new_records
+        return total_records, new_records, []
 
-    return total_records, new_records
+    return total_records, new_records, performance_list
 
-def import_fund_data(
-    max_workers: int = 5,
-    db_path: str = DATABASE_PATH,
-    limit: int = None,
-    only_a_share: bool = False,
-    use_cache: bool = True
-) -> Dict[str, Any]:
-    logger.info("Starting full update")
-    start_time = time.time()
+class FundImporter:
+    def __init__(self, db_path: str, max_workers: int = None):
+        self.db_path = db_path
+        self.max_workers = max_workers or min(os.cpu_count() * 2, 10)
 
-    if not acquire_update_lock():
-        return {"success": False, "error": "Failed to acquire update lock"}
-
-    try:
-        if not os.path.exists(db_path):
-            create_database(db_path)
-
-        all_fund_codes = fetch_fund_list_from_akshare(only_a_share=only_a_share, use_cache=use_cache)
-        if limit:
-            all_fund_codes = all_fund_codes[:limit]
-
-        existing_codes = set(get_all_fund_codes(db_path))
+    def _prepare_fund_lists(self, all_fund_codes: List[str]) -> Tuple[List[str], List[str], List[str]]:
+        existing_codes = set(get_all_fund_codes_fromDb(self.db_path))
 
         new_fund_codes = [code for code in all_fund_codes if code not in existing_codes]
         funds_to_update = [code for code in all_fund_codes if code in existing_codes]
 
-        today = datetime.now().strftime("%Y-%m-%d")
-        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        yesterday = datetime.now() - timedelta(days=1)
 
         funds_need_update = []
         funds_skip = []
 
-        fund_info_batch = batch_get_fund_info(funds_to_update, db_path)
+        fund_info_batch = batch_get_fund_info(funds_to_update, self.db_path)
 
         for code in funds_to_update:
             info = fund_info_batch.get(code, {})
@@ -2356,7 +2611,8 @@ def import_fund_data(
             perf_records = info.get("performance_records", [])
             fund_start_date = info.get("establishment_date")
 
-            needs_nav = not latest_nav_date or latest_nav_date < yesterday
+            latest_nav_date = parse_date(latest_nav_date) if latest_nav_date else None
+            needs_nav = latest_nav_date is None or latest_nav_date < yesterday
             needs_perf = not are_performance_records_complete(perf_records, fund_start_date, info.get("current_year"))
             if needs_nav or needs_perf:
                 funds_need_update.append(code)
@@ -2371,30 +2627,159 @@ def import_fund_data(
 
         logger.info(f"Updating {len(funds_need_update)} existing funds + {len(new_fund_codes)} new funds")
 
+        return new_fund_codes, funds_need_update, funds_skip, fund_info_batch
+
+    def _execute_updates(
+        self,
+        new_fund_codes: List[str],
+        update_fund_codes: List[str],
+        use_cache: bool,
+        fund_info_batch: Dict[str, Dict[str, Any]] = None
+    ) -> Tuple[int, int, List[str]]:
         total_records = 0
         new_records = 0
         failed_funds = []
 
-        fund_codes = new_fund_codes + funds_need_update
+        if new_fund_codes:
+            new_records_count, new_new_count, new_failed = self._process_new_funds(
+                new_fund_codes, use_cache
+            )
+            total_records += new_records_count
+            new_records += new_new_count
+            failed_funds.extend(new_failed)
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_code = {
-                executor.submit(update_single_fund, code, None, None, db_path, use_cache): code
-                for code in fund_codes
-            }
+        if update_fund_codes:
+            update_records_count, update_new_count, update_failed = self._process_update_funds(
+                update_fund_codes, use_cache, fund_info_batch
+            )
+            total_records += update_records_count
+            new_records += update_new_count
+            failed_funds.extend(update_failed)
 
-            for future in as_completed(future_to_code):
-                fund_code = future_to_code[future]
-                try:
-                    records, new_count = future.result()
-                    total_records += records
-                    new_records += new_count
-                    logger.info(f"Updated fund {fund_code}: {records} records, {new_count} new")
-                except Exception as e:
-                    logger.error(f"Error updating fund {fund_code}: {e}")
-                    failed_funds.append(fund_code)
+        return total_records, new_records, failed_funds
 
+    def _process_new_funds(
+        self,
+        fund_codes: List[str],
+        use_cache: bool,
+        batch_size: int = 100
+    ) -> Tuple[int, int, List[str]]:
+        if not fund_codes:
+            return 0, 0, []
+
+        total_records = 0
+        new_records = 0
+        failed_funds = []
+        total_funds = len(fund_codes)
+
+        logger.info(f"Processing {total_funds} new funds with batch_size={batch_size}")
+
+        for batch_start in range(0, total_funds, batch_size):
+            batch_end = min(batch_start + batch_size, total_funds)
+            batch_codes = fund_codes[batch_start:batch_end]
+            batch_num = batch_start // batch_size + 1
+            total_batches = (total_funds + batch_size - 1) // batch_size
+
+            logger.info(f"[New Funds] Batch {batch_num}/{total_batches} ({len(batch_codes)} funds)")
+
+            max_workers = min(self.max_workers * 2, 20)
+            all_performance = []
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_code = {
+                    executor.submit(update_single_fund, code, None, None, self.db_path, use_cache, True): code
+                    for code in batch_codes
+                }
+
+                for future in as_completed(future_to_code):
+                    fund_code = future_to_code[future]
+                    try:
+                        records, new_count, perf_list = future.result()
+                        total_records += records
+                        new_records += new_count
+                        if perf_list:
+                            all_performance.extend(perf_list)
+                        logger.info(f"[New] Updated fund {fund_code}: {records} records, {new_count} new")
+                    except Exception as e:
+                        logger.error(f"[New] Error updating fund {fund_code}: {e}")
+                        failed_funds.append(fund_code)
+
+            if all_performance:
+                perf_count = save_performance(all_performance, self.db_path)
+                total_records += perf_count
+                new_records += perf_count
+                logger.info(f"[New] Batch saved {perf_count} performance records")
+
+            if batch_end < total_funds:
+                gc.collect()
+
+        return total_records, new_records, failed_funds
+
+    def _process_update_funds(
+        self,
+        fund_codes: List[str],
+        use_cache: bool,
+        fund_info_batch: Dict[str, Dict[str, Any]] = None,
+        batch_size: int = 100
+    ) -> Tuple[int, int, List[str]]:
+        if not fund_codes:
+            return 0, 0, []
+
+        total_records = 0
+        new_records = 0
+        failed_funds = []
+        total_funds = len(fund_codes)
+
+        logger.info(f"Processing {total_funds} update funds with batch_size={batch_size}")
+
+        for batch_start in range(0, total_funds, batch_size):
+            batch_end = min(batch_start + batch_size, total_funds)
+            batch_codes = fund_codes[batch_start:batch_end]
+            batch_num = batch_start // batch_size + 1
+            total_batches = (total_funds + batch_size - 1) // batch_size
+
+            logger.info(f"[Update Funds] Batch {batch_num}/{total_batches} ({len(batch_codes)} funds)")
+
+            all_performance = []
+            with ThreadPoolExecutor(max_workers=min(self.max_workers * 2, 20)) as executor:
+                future_to_code = {
+                    executor.submit(update_single_fund, code, None, None, self.db_path, use_cache, True, fund_info_batch.get(code) if fund_info_batch else None): code
+                    for code in batch_codes
+                }
+
+                for future in as_completed(future_to_code):
+                    fund_code = future_to_code[future]
+                    try:
+                        records, new_count, perf_list = future.result()
+                        total_records += records
+                        new_records += new_count
+                        if perf_list:
+                            all_performance.extend(perf_list)
+                        logger.info(f"[Update] Updated fund {fund_code}: {records} records, {new_count} new")
+                    except Exception as e:
+                        logger.error(f"[Update] Error updating fund {fund_code}: {e}")
+                        failed_funds.append(fund_code)
+
+            if all_performance:
+                perf_count = save_performance(all_performance, self.db_path)
+                total_records += perf_count
+                new_records += perf_count
+                logger.info(f"[Update] Batch saved {perf_count} performance records")
+
+            if batch_end < total_funds:
+                gc.collect()
+
+        return total_records, new_records, failed_funds
+
+    def _finalize_update(
+        self,
+        total_records: int,
+        new_records: int,
+        failed_funds: List[str],
+        fund_codes: List[str],
+        start_time: float
+    ) -> Dict[str, Any]:
         elapsed_time = int(time.time() - start_time)
+
         record_update_history(
             update_type="FULL",
             table_name="ALL",
@@ -2403,7 +2788,8 @@ def import_fund_data(
             new_record_count=new_records,
             elapsed_time=elapsed_time,
             error_message=f"Failed funds: {failed_funds}" if failed_funds else "",
-            fund_codes=fund_codes
+            fund_codes=fund_codes,
+            db_path=self.db_path
         )
 
         logger.info(f"Full update completed: {total_records} records, {new_records} new, {elapsed_time}s")
@@ -2415,17 +2801,306 @@ def import_fund_data(
             "elapsed_time": elapsed_time,
             "failed_funds": failed_funds
         }
+
+    def import_fund_data(
+        self,
+        limit: int = None,
+        only_a_share: bool = False,
+        use_cache: bool = True
+    ) -> Dict[str, Any]:
+        logger.info("Starting full update")
+        start_time = time.time()
+
+        if not acquire_update_lock():
+            return {"success": False, "error": "Failed to acquire update lock"}
+
+        try:
+            if not os.path.exists(self.db_path):
+                create_database(self.db_path)
+
+            all_fund_codes = fetch_fund_list_from_akshare(only_a_share=only_a_share, use_cache=use_cache)
+            if limit:
+                all_fund_codes = sorted(all_fund_codes)[:limit]
+
+            new_fund_codes, funds_need_update, funds_skip, fund_info_batch = self._prepare_fund_lists(all_fund_codes)
+
+            total_records, new_records, failed_funds = self._execute_updates(
+                new_fund_codes, funds_need_update, use_cache, fund_info_batch
+            )
+
+            all_processed = new_fund_codes + funds_need_update
+            return self._finalize_update(total_records, new_records, failed_funds, all_processed, start_time)
+
+        except Exception as e:
+            logger.error(f"Error in full update: {e}")
+            elapsed_time = int(time.time() - start_time)
+            record_update_history(
+                update_type="FULL",
+                table_name="ALL",
+                status="FAILED",
+                record_count=0,
+                new_record_count=0,
+                elapsed_time=elapsed_time,
+                error_message=str(e),
+                db_path=self.db_path
+            )
+            return {"success": False, "error": str(e)}
+        finally:
+            release_update_lock()
+
+
+def import_fund_data(
+    max_workers: int = 15,
+    db_path: str = DATABASE_PATH,
+    limit: int = None,
+    only_a_share: bool = True,
+    use_cache: bool = True
+) -> Dict[str, Any]:
+    return FundImporter(db_path, max_workers).import_fund_data(
+        limit=limit,
+        only_a_share=only_a_share,
+        use_cache=use_cache
+    )
+
+
+def batch_fetch_nav_history(
+    fund_codes: List[str],
+    db_path: str = DATABASE_PATH,
+    max_workers: int = 50,
+    use_cache: bool = True
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    批量从akshare获取多个基金的净值历史（高并发）
+
+    Args:
+        fund_codes: 基金代码列表
+        db_path: 数据库路径
+        max_workers: 最大并发数
+        use_cache: 是否使用缓存
+
+    Returns:
+        Dict[str, List[Dict]], key为基金代码，value为净值历史列表
+    """
+    fund_nav_data: Dict[str, List[Dict[str, Any]]] = {}
+
+    def fetch_for_fund(code: str) -> Tuple[str, List[Dict[str, Any]]]:
+        try:
+            nav_data = fetch_fund_nav_history(code, None, None, None, use_cache)
+            return code, nav_data
+        except Exception as e:
+            logger.error(f"Error fetching nav for fund {code}: {e}")
+            return code, []
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_for_fund, code): code
+            for code in fund_codes
+        }
+
+        for future in as_completed(futures):
+            code, nav_data = future.result()
+            fund_nav_data[code] = nav_data
+
+    return fund_nav_data
+
+
+def batch_calculate_performance(
+    fund_nav_data: Dict[str, List[Dict[str, Any]]],
+    db_path: str = DATABASE_PATH,
+    max_workers: int = 30
+) -> List[Dict[str, Any]]:
+    """
+    批量计算多个基金的绩效数据
+
+    Args:
+        fund_nav_data: Dict[基金代码, 净值历史列表]
+        db_path: 数据库路径
+
+    Returns:
+        所有基金的绩效数据列表
+    """
+    all_performance: List[Dict[str, Any]] = []
+
+    def calc_for_fund(code: str, nav_data: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
+        try:
+            performance = fetch_fund_performance(code, db_path, use_cache=False)
+            return code, performance if performance else []
+        except Exception as e:
+            logger.error(f"Error calculating performance for fund {code}: {e}")
+            return code, []
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(calc_for_fund, code, nav_data): code
+            for code, nav_data in fund_nav_data.items()
+        }
+
+        for future in as_completed(futures):
+            code, performance = future.result()
+            all_performance.extend(performance)
+
+    return all_performance
+
+
+def import_fund_data_batch(
+    max_workers: int = 50,
+    db_path: str = DATABASE_PATH,
+    limit: int = None,
+    only_a_share: bool = True,
+    use_cache: bool = True
+) -> Dict[str, Any]:
+    """
+    分阶段批量导入基金数据（优化版）
+
+    阶段1: 批量获取和保存净值历史（高并发）
+    阶段2: 批量计算和保存绩效数据
+
+    Args:
+        max_workers: 最大并发数
+        db_path: 数据库路径
+        limit: 限制导入基金数量
+        only_a_share: 只导入A股基金
+        use_cache: 使用缓存
+
+    Returns:
+        导入结果统计
+    """
+    logger.info("Starting batch import (optimized)")
+    start_time = time.time()
+
+    if not acquire_update_lock():
+        return {"success": False, "error": "Failed to acquire update lock"}
+
+    try:
+        if not os.path.exists(db_path):
+            create_database(db_path)
+
+        all_fund_codes = fetch_fund_list_from_akshare(only_a_share=only_a_share, use_cache=use_cache)
+        if limit:
+            all_fund_codes = all_fund_codes[:limit]
+
+        logger.info(f"Total funds to process: {len(all_fund_codes)}")
+
+        existing_codes = set(get_all_fund_codes_fromDb(db_path))
+        new_fund_codes = [code for code in all_fund_codes if code not in existing_codes]
+        update_fund_codes = [code for code in all_fund_codes if code in existing_codes]
+
+        logger.info(f"New funds: {len(new_fund_codes)}, Update funds: {len(update_fund_codes)}")
+
+        total_records = 0
+        new_records = 0
+
+        if new_fund_codes:
+            logger.info(f"Phase 1: Batch fetching basic info for {len(new_fund_codes)} new funds")
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    # 基金基本信息优先从缓存获取
+                    executor.submit(fetch_fund_basic_info, code, db_path, use_cache=True): code
+                    for code in new_fund_codes
+                }
+                basic_infoList = []
+                for future in as_completed(futures):
+                    code = futures[future]
+                    try:
+                        info = future.result()
+                        if info:
+                            info["代码"] = code
+                            basic_infoList.append(info)
+                    except Exception as e:
+                        logger.error(f"Error fetching basic info for {code}: {e}")
+
+                if basic_infoList:
+                    saved = save_basic_info_batch(basic_infoList, db_path)
+                    total_records += saved
+                    new_records += saved
+                    logger.info(f"Saved basic info for {saved} new funds")
+
+            logger.info(f"Phase 2: Batch fetching nav history for {len(new_fund_codes)} new funds")
+            new_fund_nav_data = batch_fetch_nav_history(new_fund_codes, db_path, max_workers, use_cache)
+
+            nav_records = 0
+            for code, nav_list in new_fund_nav_data.items():
+                if nav_list:
+                    saved = save_nav_history(nav_list, db_path)
+                    nav_records += saved
+            total_records += nav_records
+            new_records += nav_records
+            logger.info(f"Saved {nav_records} nav history records for new funds")
+
+        if update_fund_codes:
+            yesterday = datetime.now() - timedelta(days=1)
+            fund_info_batch = batch_get_fund_info(update_fund_codes, db_path)
+
+            funds_need_nav_update = []
+            for code in update_fund_codes:
+                info = fund_info_batch.get(code, {})
+                latest_nav_date = info.get("latest_nav_date")
+                if latest_nav_date:
+                    latest_nav_dt = parse_date(latest_nav_date)
+                    if latest_nav_dt and latest_nav_dt >= yesterday:
+                        continue
+                funds_need_nav_update.append(code)
+
+            if funds_need_nav_update:
+                logger.info(f"Phase 3: Batch updating nav history for {len(funds_need_nav_update)} funds")
+                update_fund_nav_data = batch_fetch_nav_history(funds_need_nav_update, db_path, max_workers, use_cache)
+
+                nav_records = 0
+                for code, nav_list in update_fund_nav_data.items():
+                    if nav_list:
+                        saved = save_nav_history(nav_list, db_path)
+                        nav_records += saved
+                total_records += nav_records
+                new_records += nav_records
+                logger.info(f"Updated {nav_records} nav history records")
+
+        logger.info("Phase 4: Batch calculating performance for all processed funds")
+        all_fund_codes_processed = new_fund_codes + update_fund_codes
+        all_fund_nav_data = batch_fetch_nav_history(all_fund_codes_processed, db_path, max_workers, use_cache)
+
+        all_performance = batch_calculate_performance(all_fund_nav_data, db_path, max_workers)
+
+        if all_performance:
+            saved = save_performance(all_performance, db_path)
+            total_records += saved
+            logger.info(f"Saved {saved} performance records")
+
+        elapsed_time = int(time.time() - start_time)
+
+        record_update_history(
+            update_type="BATCH",
+            table_name="ALL",
+            status="SUCCESS",
+            record_count=total_records,
+            new_record_count=new_records,
+            elapsed_time=elapsed_time,
+            error_message="",
+            fund_codes=all_fund_codes_processed,
+            db_path=db_path
+        )
+
+        logger.info(f"Batch import completed: {total_records} records, {new_records} new, {elapsed_time}s")
+
+        return {
+            "success": True,
+            "total_records": total_records,
+            "new_records": new_records,
+            "elapsed_time": elapsed_time,
+            "processed_funds": len(all_fund_codes_processed)
+        }
+
     except Exception as e:
-        logger.error(f"Error in full update: {e}")
+        logger.error(f"Error in batch import: {e}")
         elapsed_time = int(time.time() - start_time)
         record_update_history(
-            update_type="FULL",
+            update_type="BATCH",
             table_name="ALL",
             status="FAILED",
             record_count=0,
             new_record_count=0,
             elapsed_time=elapsed_time,
-            error_message=str(e)
+            error_message=str(e),
+            db_path=db_path
         )
         return {"success": False, "error": str(e)}
     finally:
@@ -2492,11 +3167,37 @@ if __name__ == "__main__":
         success = repair_database()
         print(json.dumps({"success": success}, ensure_ascii=False))
 
+    elif command == "get_fund_list":
+        limit = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else None
+        only_a_share = sys.argv[3].lower() == "true" if len(sys.argv) > 3 else False
+        fund_codes = fetch_fund_list_from_akshare(use_cache=True, limit=limit, only_a_share=only_a_share)
+        print(json.dumps(fund_codes, ensure_ascii=False))
+
     elif command == "import_fund_data":
-        max_workers = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+        max_workers = int(sys.argv[2]) if len(sys.argv) > 2 else 15
         limit = int(sys.argv[3]) if len(sys.argv) > 3 else None
         result = import_fund_data(max_workers=max_workers, limit=limit)
         print(json.dumps(result, ensure_ascii=False))
+
+    elif command == "update_single_fund":
+        fund_code = sys.argv[2] if len(sys.argv) > 2 else None
+        if not fund_code:
+            print(json.dumps({"error": "Missing fund_code"}, ensure_ascii=False))
+            sys.exit(1)
+        start_date = sys.argv[3] if len(sys.argv) > 3 else None
+        end_date = sys.argv[4] if len(sys.argv) > 4 else None
+        total_records, new_records = update_single_fund(fund_code, start_date, end_date)
+        print(json.dumps({"total_records": total_records, "new_records": new_records}, ensure_ascii=False))
+
+    elif command == "fetch_fund_performance":
+        fund_code = sys.argv[2] if len(sys.argv) > 2 else None
+        if not fund_code:
+            print(json.dumps({"error": "Missing fund_code"}, ensure_ascii=False))
+            sys.exit(1)
+        is_first_insert = sys.argv[3].lower() == "true" if len(sys.argv) > 3 else False
+        use_cache = sys.argv[4].lower() == "true" if len(sys.argv) > 4 else True
+        performance = fetch_fund_performance(fund_code, is_first_insert=is_first_insert, use_cache=use_cache)
+        print(json.dumps(performance, ensure_ascii=False))
 
     elif command == "status":
         status = show_status()
@@ -2505,6 +3206,29 @@ if __name__ == "__main__":
     elif command == "clear_cache":
         clear_expired_cache()
         print(json.dumps({"success": True}, ensure_ascii=False))
+
+    elif command == "recalculate_performance":
+        import multiprocessing as mp
+        from functools import partial
+
+        def process_fund(code):
+            records, new_count = recalculate_performance_only(code)
+            return code, records, new_count
+
+        fund_codes = get_all_fund_codes_fromDb()
+        total = len(fund_codes)
+        logger.info(f"Recalculating performance for {total} funds")
+
+        results = []
+        with mp.Pool(processes=15) as pool:
+            for i, (code, records, new_count) in enumerate(pool.imap(process_fund, fund_codes), 1):
+                results.append((code, records, new_count))
+                if i % 100 == 0:
+                    logger.info(f"Progress: {i}/{total}")
+
+        total_records = sum(r[1] for r in results)
+        logger.info(f"Completed: {total} funds, {total_records} records")
+        print(json.dumps({"success": True, "total_funds": total, "total_records": total_records}, ensure_ascii=False))
 
     else:
         print(json.dumps({"error": f"Unknown command: {command}"}, ensure_ascii=False))
