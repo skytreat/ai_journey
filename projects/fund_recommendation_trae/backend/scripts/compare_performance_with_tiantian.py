@@ -15,7 +15,7 @@ TEST_DATABASE_PATH = os.path.join(SCRIPT_DIR, "fund_data_test_normal.db")
 random.seed(42)
 fund_codes = get_all_fund_codes_fromDb(TEST_DATABASE_PATH)
 # sample_codes = fund_codes[:50] if len(fund_codes) >= 50 else fund_codes
-sample_codes = random.sample(fund_codes, min(10, len(fund_codes)))
+sample_codes = random.sample(fund_codes, min(20, len(fund_codes)))
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -98,7 +98,7 @@ for idx, fund_code in enumerate(sample_codes):
                 "tiantian": f"{ak_val:.2f}%",
                 "database": f"{db_val:.2f}%",
                 "diff": f"{diff:.2f}%",
-                "ok": diff < 1.0
+                "ok": diff < 0.1
             }
         elif ak_val is not None:
             comparison[indicator] = {

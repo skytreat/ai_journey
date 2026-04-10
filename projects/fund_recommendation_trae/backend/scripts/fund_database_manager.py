@@ -96,10 +96,49 @@ CACHE_EXPIRY_HISTORICAL_NAV = 2 * 365 * 24 * 3600
 CACHE_EXPIRY_CURRENT_YEAR_NAV = 1 * 3600
 CACHE_EXPIRY_DAY = 24 * 3600
 
+PERIOD_TYPES = ["成立以来", "今年以来", "近1周", "近1月", "近3月", "近6月", "近1年", "近3年"]
+ALL_PERIOD_TYPES = PERIOD_TYPES + ["历史年份"]
+
 UPDATE_LOCK_FILE = os.path.join(SCRIPT_DIR, ".update_lock")
 UPDATE_LOCK_TIMEOUT = 3600
 
+DEFAULT_MAX_WORKERS = min(os.cpu_count() * 2, 10)
+MAX_CONCURRENT_WORKERS = 20
+
 _lock_acquired = False
+
+
+def parse_chinese_date(date_str: Any) -> Optional[datetime]:
+    if not date_str:
+        return None
+    try:
+        normalized = str(date_str).replace("年", "-").replace("月", "-").replace("日", "")[:10]
+        return datetime.strptime(normalized, "%Y-%m-%d")
+    except Exception as e:
+        logger.debug(f"Failed to parse date '{date_str}': {e}")
+        return None
+
+
+def build_performance_record(
+    fund_code: str,
+    period_type: str,
+    period_value: str,
+    perf: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    base = {
+        "代码": fund_code,
+        "周期类型": period_type,
+        "周期值": period_value,
+        "同类型基金排名": None,
+        "同类型基金总数": None,
+        "更新日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    metrics = ["净值增长率", "最大回撤", "下行标准差", "夏普比率", "索提诺比率", "卡玛比率", "年化收益率", "波动率"]
+    for metric in metrics:
+        base[metric] = perf.get(metric) if perf else None
+    
+    return base
 
 
 def _signal_handler(signum, frame):
@@ -134,12 +173,15 @@ MAX_RETRIES = 3
 RETRY_BASE_DELAY = 1
 
 
-def retry_operation(func, max_retries: int = MAX_RETRIES, base_delay: int = RETRY_BASE_DELAY):
+def retry_operation(func, max_retries: int = MAX_RETRIES, base_delay: int = RETRY_BASE_DELAY, return_none_on_failure: bool = False):
     for attempt in range(max_retries):
         try:
             return func()
         except Exception as e:
             if attempt == max_retries - 1:
+                if return_none_on_failure:
+                    logger.warning(f"All {max_retries} attempts failed for {func.__name__ if hasattr(func, '__name__') else 'operation'}: {e}")
+                    return None
                 raise
             delay = base_delay * (2 ** attempt)
             logger.warning(f"Attempt {attempt + 1} failed: {e}, retrying in {delay}s")
@@ -543,9 +585,7 @@ def _cached_get_establishment_date(fund_code: str, db_path: str) -> Optional[dat
             result = cursor.fetchone()
             if not result or not result[0]:
                 return None
-            date_str = str(result[0]).replace("年", "-").replace("月", "-").replace("日", "")
-            date_str = date_str[:10]
-            return datetime.strptime(date_str, "%Y-%m-%d")
+            return parse_chinese_date(result[0])
     except Exception as e:
         logger.error(f"Error getting fund establishment date: {e}")
         return None
@@ -553,21 +593,6 @@ def _cached_get_establishment_date(fund_code: str, db_path: str) -> Optional[dat
 
 def get_fund_establishment_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[datetime]:
     return _cached_get_establishment_date(fund_code, db_path)
-
-
-def get_latest_nav_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[str]:
-    try:
-        with get_db_connection(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT MAX(日期) FROM fund_nav_history WHERE 代码 = ?",
-                (fund_code,)
-            )
-            result = cursor.fetchone()[0]
-            return result
-    except Exception as e:
-        logger.error(f"Error getting latest nav date: {e}")
-        return None
 
 
 def get_latest_update_history(db_path: str = DATABASE_PATH) -> Optional[Dict]:
@@ -1000,16 +1025,32 @@ def generate_mock_corporate_actions(fund_code: str) -> List[Dict[str, Any]]:
     return data
 
 
-def get_nav_history_from_db(fund_code: str, db_path: str = DATABASE_PATH) -> List[Dict[str, Any]]:
+def get_nav_history_from_db(
+    fund_code: str, 
+    db_path: str = DATABASE_PATH,
+    start_date: str = None,
+    end_date: str = None
+) -> List[Dict[str, Any]]:
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            sql = """
                 SELECT 代码, 日期, 单位净值, 累计净值, 日增长率
                 FROM fund_nav_history
                 WHERE 代码 = ?
-                ORDER BY 日期
-            """, (fund_code,))
+            """
+            params = [fund_code]
+            
+            if start_date:
+                sql += " AND 日期 >= ?"
+                params.append(start_date)
+            if end_date:
+                sql += " AND 日期 <= ?"
+                params.append(end_date)
+            
+            sql += " ORDER BY 日期"
+            
+            cursor.execute(sql, params)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
@@ -1043,11 +1084,28 @@ def get_period_days_map() -> Dict[str, int]:
     return {
         "近1周": 7,
         "近1月": 30,
-        "近3月": 90,
+        "近3月": 89,
         "近6月": 180,
         "近1年": 365,
         "近3年": 1095
     }
+
+
+def get_period_months_map() -> Dict[str, int]:
+    return {
+        "近1月": 1,
+        "近6月": 6,
+    }
+
+
+def get_date_months_ago(date_obj: datetime, months: int) -> datetime:
+    month = date_obj.month - months
+    year = date_obj.year
+    while month <= 0:
+        month += 12
+        year -= 1
+    day = min(date_obj.day, [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
+    return datetime(year, month, day)
 
 
 def filter_period_data(
@@ -1060,12 +1118,19 @@ def filter_period_data(
 
     today = df["日期"].max()
     period_days_map = get_period_days_map()
+    period_months_map = get_period_months_map()
 
     if period_type == "成立以来":
         period_df = df
     elif period_type == "今年以来":
         year_start = datetime(today.year, 1, 1)
         period_df = df[df["日期"] >= year_start]
+        if len(period_df) < 2:
+            return None
+    elif period_type in period_months_map:
+        months = period_months_map[period_type]
+        start_date = get_date_months_ago(today, months)
+        period_df = df[df["日期"] >= start_date]
         if len(period_df) < 2:
             return None
     elif period_type in period_days_map:
@@ -1154,6 +1219,15 @@ def calculate_period_performance(
     if df is None:
         return None
 
+    return calculate_period_performance_from_df(df, period_type, period_value, risk_free_rate)
+
+
+def calculate_period_performance_from_df(
+    df: pd.DataFrame,
+    period_type: str,
+    period_value: str = "",
+    risk_free_rate: float = 0.025
+) -> Optional[Dict[str, Any]]:
     returns = df["日增长率"].dropna()
     if len(returns) < 2:
         return None
@@ -1177,35 +1251,30 @@ def fetch_fund_performance(
     use_cache: bool = True,
     nav_data: List[Dict[str, Any]] = None
 ) -> List[Dict[str, Any]]:
-    cache_key = get_cache_key("performance", fund_code)
-    if use_cache and nav_data is None:
+    cache_suffix = "_full" if is_first_insert else "_incremental"
+    cache_key = get_cache_key("performance" + cache_suffix, fund_code)
+    if use_cache:
         cached_data = get_cache(cache_key)
         if cached_data:
             return cached_data
 
     if nav_data is None:
-        # 优化建议:
-        # 1. 在 get_nav_history_from_db 查询时限制日期范围，只获取计算所需的最近10年数据
-        #    避免加载基金全部历史净值（如2000年成立可能有5000+条记录）
-        # 2. 将 nav_data 转换为 DataFrame 后按日期排序一次，避免在 calculate_period_performance 中重复处理
-        # 3. 历史年份业绩计算时分批处理，避免一次性计算所有年份造成内存压力
         nav_data = get_nav_history_from_db(fund_code, db_path)
 
     if not nav_data or len(nav_data) < 2:
         return generate_mock_performance(fund_code)
 
-    df = pd.DataFrame(nav_data)
-    df["日期"] = pd.to_datetime(df["日期"])
-    df = df.sort_values("日期").reset_index(drop=True)
+    df = convert_nav_to_dataframe(nav_data)
+    if df is None:
+        return generate_mock_performance(fund_code)
 
-    today = df["日期"].max()
-    current_year = today.year
+    current_year = datetime.now().year
 
     if not fund_start_date:
         fund_start_date = get_fund_establishment_date(fund_code, db_path)
     fund_start_year = fund_start_date.year if fund_start_date else df["日期"].min().year
 
-    period_types = ["成立以来", "今年以来", "近1周", "近1月", "近3月", "近6月", "近1年", "近3年"]
+    period_types = PERIOD_TYPES.copy()
 
     if is_first_insert:
         start_year = fund_start_year
@@ -1221,7 +1290,14 @@ def fetch_fund_performance(
                     WHERE 代码 = ?
                 """, (fund_code,))
                 existing_periods = cursor.fetchall()
-        except:
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error for fund {fund_code}: {e}")
+            existing_periods = []
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Database integrity error for fund {fund_code}: {e}")
+            existing_periods = []
+        except Exception as e:
+            logger.error(f"Unexpected error querying performance for fund {fund_code}: {e}")
             existing_periods = []
         
         existing_years = set(p[1] for p in existing_periods if p[0] == "历史年份" and p[1])
@@ -1232,48 +1308,14 @@ def fetch_fund_performance(
                 period_types.append(("历史年份", year_str))
 
     data = []
-
     for period_type_item in period_types:
         if isinstance(period_type_item, tuple):
             period_type, period_value = period_type_item
         else:
             period_type = period_type_item
             period_value = ""
-        perf = calculate_period_performance(nav_data, period_type, period_value)
-        if perf:
-            data.append({
-                "代码": fund_code,
-                "周期类型": period_type,
-                "周期值": period_value,
-                "净值增长率": perf["净值增长率"],
-                "最大回撤": perf["最大回撤"],
-                "下行标准差": perf["下行标准差"],
-                "夏普比率": perf["夏普比率"],
-                "索提诺比率": perf["索提诺比率"],
-                "卡玛比率": perf["卡玛比率"],
-                "年化收益率": perf["年化收益率"],
-                "波动率": perf["波动率"],
-                "同类型基金排名": None,
-                "同类型基金总数": None,
-                "更新日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-        else:
-            data.append({
-                "代码": fund_code,
-                "周期类型": period_type,
-                "周期值": period_value,
-                "净值增长率": 0,
-                "最大回撤": 0,
-                "下行标准差": 0,
-                "夏普比率": 0,
-                "索提诺比率": 0,
-                "卡玛比率": 0,
-                "年化收益率": 0,
-                "波动率": 0,
-                "同类型基金排名": None,
-                "同类型基金总数": None,
-                "更新日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
+        perf = calculate_period_performance_from_df(df, period_type, period_value)
+        data.append(build_performance_record(fund_code, period_type, period_value, perf))
 
     if data:
         set_cache(cache_key, data)
@@ -1281,7 +1323,7 @@ def fetch_fund_performance(
 
 
 def generate_mock_performance(fund_code: str) -> List[Dict[str, Any]]:
-    period_types = ["成立以来", "今年以来", "近1周", "近1月", "近3月", "近6月", "近1年", "近3年"]
+    period_types = PERIOD_TYPES.copy()
     data = []
     for period_type in period_types:
         data.append({
@@ -1579,11 +1621,7 @@ def batch_get_fund_info(fund_codes: List[str], db_path: str = DATABASE_PATH) -> 
                 share_types[code] = share_type
                 parsed_date = None
                 if est_date:
-                    try:
-                        date_str = str(est_date).replace("年", "-").replace("月", "-").replace("日", "")[:10]
-                        parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
-                    except:
-                        parsed_date = None
+                    parsed_date = parse_chinese_date(est_date)
                 establishment_dates[code] = parsed_date
 
             # 最新净值日期
@@ -1660,65 +1698,98 @@ def has_performance_data(fund_code: str, db_path: str = DATABASE_PATH) -> bool:
         return False
 
 
+def check_performance_complete(
+    fund_code: str = None,
+    perf_records: List[Tuple[str, Any]] = None,
+    fund_start_date: Optional[datetime] = None,
+    db_path: str = DATABASE_PATH
+) -> Tuple[bool, bool]:
+    if perf_records is None and fund_code:
+        try:
+            with get_db_connection(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 周期类型, 周期值
+                    FROM fund_performance
+                    WHERE 代码 = ?
+                """, (fund_code,))
+                perf_records = cursor.fetchall()
+        except Exception as e:
+            logger.error(f"Error getting performance records: {e}")
+            perf_records = []
+    
+    if not fund_start_date and fund_code:
+        fund_start_date = get_fund_establishment_date(fund_code, db_path)
+    
+    if not fund_start_date:
+        return False, False
+    
+    current_year = datetime.now().year
+    fund_start_year = fund_start_date.year
+    
+    has_data = len(perf_records) > 0
+    base_complete = len(perf_records) >= 8
+    
+    if fund_start_year == current_year:
+        historical_complete = True
+    else:
+        expected_historical_years = current_year - fund_start_year
+        historical_years_count = sum(
+            1 for p in perf_records
+            if p[0] == "历史年份" and p[1] and int(p[1]) >= fund_start_year
+        )
+        historical_complete = historical_years_count >= expected_historical_years
+    
+    return has_data, base_complete and historical_complete
+
+
 def are_performance_records_complete(
     perf_records: List[Tuple[str, Any]],
     fund_start_date: Optional[datetime],
     current_year: int
 ) -> bool:
-    if not fund_start_date:
-        return False
-    fund_start_year = fund_start_date.year
-    expected_historical_years = current_year - fund_start_year
-
-    historical_years_count = sum(
-        1 for p in perf_records
-        if p[0] == "历史年份" and p[1] and int(p[1]) >= fund_start_year
+    _, is_complete = check_performance_complete(
+        perf_records=perf_records,
+        fund_start_date=fund_start_date
     )
-
-    required_periods = 8
-    base_complete = len(perf_records) >= required_periods
-    historical_complete = historical_years_count >= expected_historical_years
-
-    return base_complete and historical_complete
+    return is_complete
 
 
 def is_performance_complete(fund_code: str, db_path: str = DATABASE_PATH, fund_start_date: datetime = None) -> Tuple[bool, bool]:
+    return check_performance_complete(
+        fund_code=fund_code,
+        fund_start_date=fund_start_date,
+        db_path=db_path
+    )
+
+
+def get_latest_performance_update_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[str]:
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
-
-            if not fund_start_date:
-                fund_start_date = get_fund_establishment_date(fund_code, db_path)
-            if not fund_start_date:
-                return False, False
-            fund_start_year = fund_start_date.year
-
-            cursor.execute("""
-                SELECT 周期类型, 周期值
-                FROM fund_performance
-                WHERE 代码 = ?
-            """, (fund_code,))
-            existing_periods = cursor.fetchall()
-
-            has_data = len(existing_periods) > 0
-
-            current_year = datetime.now().year
-            expected_historical_years = current_year - fund_start_year
-
-            historical_years_count = sum(
-                1 for p in existing_periods
-                if p[0] == "历史年份" and p[1] and int(p[1]) >= fund_start_year
-            )
-
-            required_periods = 8
-            base_complete = len(existing_periods) >= required_periods
-            historical_complete = historical_years_count >= expected_historical_years
-
-            return has_data, base_complete and historical_complete
-
+            cursor.execute("SELECT MAX(更新日期) FROM fund_performance WHERE 代码 = ?", (fund_code,))
+            result = cursor.fetchone()
+            return result[0] if result and result[0] else None
     except Exception as e:
-        logger.error(f"Error checking performance completeness: {e}")
-        return False, False
+        logger.error(f"Error getting latest performance update date: {e}")
+        return None
+
+
+def needs_performance_recalc(fund_code: str, db_path: str = DATABASE_PATH) -> bool:
+    latest_nav_date = get_latest_nav_date(fund_code, db_path)
+    if not latest_nav_date:
+        return False
+    
+    latest_perf_update = get_latest_performance_update_date(fund_code, db_path)
+    if not latest_perf_update:
+        return True
+    
+    try:
+        nav_date = datetime.strptime(latest_nav_date, "%Y-%m-%d")
+        perf_update_date = datetime.strptime(latest_perf_update[:10], "%Y-%m-%d")
+        return nav_date > perf_update_date
+    except (ValueError, TypeError):
+        return True
 
 
 def get_latest_asset_scale_date(fund_code: str, db_path: str = DATABASE_PATH) -> Optional[str]:
@@ -1842,7 +1913,7 @@ def validate_performance_data(perf_data: Dict[str, Any]) -> Tuple[bool, str]:
     period_type = perf_data.get("周期类型")
     if not period_type or not isinstance(period_type, str):
         return False, f"基金{fund_code}周期类型无效"
-    valid_period_types = ["成立以来", "今年以来", "近1周", "近1月", "近3月", "近6月", "近1年", "近3年", "历史年份"]
+    valid_period_types = ALL_PERIOD_TYPES
     if period_type not in valid_period_types:
         return False, f"基金{fund_code}周期类型无效: {period_type}"
     annual_return = perf_data.get("年化收益率")
@@ -2415,11 +2486,7 @@ def recalculate_performance_only(fund_code: str, db_path: str = DATABASE_PATH) -
         existing_basic = get_basic_info_from_db(fund_code, db_path)
         fund_start_date = None
         if existing_basic and existing_basic.get("成立日期"):
-            try:
-                date_str = str(existing_basic["成立日期"]).replace("年", "-").replace("月", "-").replace("日", "")[:10]
-                fund_start_date = datetime.strptime(date_str, "%Y-%m-%d")
-            except:
-                pass
+            fund_start_date = parse_chinese_date(existing_basic["成立日期"])
 
         if not fund_start_date:
             fund_start_date = get_fund_establishment_date(fund_code, db_path)
@@ -2485,34 +2552,30 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
             share_type = fund_info.get("share_type")
 
         existing_basic = None
-        if share_type is None and not start_date:
+        if share_type is None:
             existing_basic = get_basic_info_from_db(fund_code, db_path)
             if existing_basic:
                 share_type = existing_basic.get("份额类型")
 
-        if not share_type and not start_date:
-            existing_basic = fetch_fund_basic_info(fund_code, db_path, use_cache=use_cache)
-            if existing_basic:
-                share_type = existing_basic.get("份额类型")
-                if save_basic_info(existing_basic, db_path):
-                    total_records += 1
-                    new_records += 1
-                    logger.info(f"Saved basic info for fund {fund_code}")
-
-        if share_type and not start_date:
-            logger.info(f"Fund {fund_code} already exists in database, checking for updates")
+        if not share_type:
+            try:
+                existing_basic = fetch_fund_basic_info(fund_code, db_path, use_cache=use_cache)
+                if existing_basic:
+                    share_type = existing_basic.get("份额类型")
+                    if save_basic_info(existing_basic, db_path):
+                        total_records += 1
+                        new_records += 1
+                        logger.info(f"Saved basic info for fund {fund_code}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch basic info for fund {fund_code}: {e}")
 
         fund_start_date = None
         if fund_info and fund_info.get("establishment_date"):
             fund_start_date = fund_info.get("establishment_date")
-        elif not start_date:
+        else:
             if existing_basic and existing_basic.get("成立日期"):
-                try:
-                    date_str = str(existing_basic["成立日期"]).replace("年", "-").replace("月", "-").replace("日", "")[:10]
-                    fund_start_date = datetime.strptime(date_str, "%Y-%m-%d")
-                except:
-                    fund_start_date = get_fund_establishment_date(fund_code, db_path)
-            else:
+                fund_start_date = parse_chinese_date(existing_basic["成立日期"])
+            if not fund_start_date:
                 fund_start_date = get_fund_establishment_date(fund_code, db_path)
 
         nav_updated = False
@@ -2530,16 +2593,17 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
         if fund_start_date:
             fetch_kwargs["fund_start_date"] = fund_start_date
         fetch_kwargs["db_path"] = db_path
-        fetch_kwargs["use_cache"] = True
+        fetch_kwargs["use_cache"] = use_cache
 
+        # 保存当前基金的净值历史数据
         nav_data = None
         for table_name, get_latest_fn, fetch_fn, save_fn in table_update_handlers:
             try:
                 latest_date = get_latest_fn(fund_code, db_path)
                 update_start = get_update_start_date(latest_date, start_date, end_date)
 
-                if update_start and update_start > end_date:
-                    logger.debug(f"Skipping {table_name} update for fund {fund_code}: update_start ({update_start}) > end_date ({end_date})")
+                if update_start and update_start >= end_date:
+                    logger.debug(f"Skipping {table_name} update for fund {fund_code}: update_start ({update_start}) >= end_date ({end_date})")
                     continue
 
                 data = retry_operation(lambda: fetch_fn(fund_code, update_start, end_date, **fetch_kwargs))
@@ -2556,41 +2620,44 @@ def update_single_fund(fund_code: str, start_date: str = None, end_date: str = N
             except Exception as e:
                 logger.error(f"Error updating {table_name} for fund {fund_code}: {e}")
                 continue
-
-        if share_type == "A":
-            try:
-                has_data, is_complete = is_performance_complete(fund_code, db_path, fund_start_date)
-                is_first = not has_data
-                needs_recalc = nav_updated or not is_complete
-                if is_first or needs_recalc:
-                    performance = fetch_fund_performance(
-                        fund_code, db_path,
-                        is_first_insert=is_first,
-                        fund_start_date=fund_start_date,
-                        use_cache=False,
-                        nav_data=nav_data
-                    )
-                    if performance:
-                        if skip_perf_save:
-                            performance_list.extend(performance)
-                        else:
-                            saved_count = save_performance(performance, db_path)
-                            total_records += saved_count
-                            new_records += saved_count
-                            logger.info(f"Saved performance data for fund {fund_code}: {saved_count} records")
-            except Exception as e:
-                logger.error(f"Error calculating performance for fund {fund_code}: {e}")
+        
+        # 计算A类基金的性能数据
+        if share_type != "A":
+            return total_records, new_records, performance_list
+        try:
+            has_data, is_complete = is_performance_complete(fund_code, db_path, fund_start_date)
+            is_first = not has_data
+            nav_newer_than_perf = needs_performance_recalc(fund_code, db_path)
+            needs_recalc = nav_updated or not is_complete or nav_newer_than_perf
+            if is_first or needs_recalc:
+                performance = fetch_fund_performance(
+                    fund_code, db_path,
+                    is_first_insert=is_first,
+                    fund_start_date=fund_start_date,
+                    use_cache=use_cache,
+                    nav_data=nav_data
+                )
+                if performance:
+                    if skip_perf_save:
+                        performance_list.extend(performance)
+                    else:
+                        saved_count = save_performance(performance, db_path)
+                        total_records += saved_count
+                        new_records += saved_count
+                        logger.info(f"Saved performance data for fund {fund_code}: {saved_count} records")
+        except Exception as e:
+            logger.error(f"Error calculating performance for fund {fund_code}: {e}")
 
     except Exception as e:
         logger.error(f"Error in update_single_fund for fund {fund_code}: {e}")
         return total_records, new_records, []
 
-    return total_records, new_records, performance_list
+    
 
 class FundImporter:
     def __init__(self, db_path: str, max_workers: int = None):
         self.db_path = db_path
-        self.max_workers = max_workers or min(os.cpu_count() * 2, 10)
+        self.max_workers = max_workers or DEFAULT_MAX_WORKERS
 
     def _prepare_fund_lists(self, all_fund_codes: List[str]) -> Tuple[List[str], List[str], List[str]]:
         existing_codes = set(get_all_fund_codes_fromDb(self.db_path))
@@ -2605,19 +2672,23 @@ class FundImporter:
 
         fund_info_batch = batch_get_fund_info(funds_to_update, self.db_path)
 
-        for code in funds_to_update:
-            info = fund_info_batch.get(code, {})
-            latest_nav_date = info.get("latest_nav_date")
-            perf_records = info.get("performance_records", [])
-            fund_start_date = info.get("establishment_date")
+        if not fund_info_batch and funds_to_update:
+            logger.warning("batch_get_fund_info returned empty, treating all funds as needing update")
+            funds_need_update = funds_to_update
+        else:
+            for code in funds_to_update:
+                info = fund_info_batch.get(code, {})
+                latest_nav_date = info.get("latest_nav_date")
+                perf_records = info.get("performance_records", [])
+                fund_start_date = info.get("establishment_date")
 
-            latest_nav_date = parse_date(latest_nav_date) if latest_nav_date else None
-            needs_nav = latest_nav_date is None or latest_nav_date < yesterday
-            needs_perf = not are_performance_records_complete(perf_records, fund_start_date, info.get("current_year"))
-            if needs_nav or needs_perf:
-                funds_need_update.append(code)
-            else:
-                funds_skip.append(code)
+                latest_nav_date = parse_date(latest_nav_date) if latest_nav_date else None
+                needs_nav = latest_nav_date is None or latest_nav_date < yesterday
+                needs_perf = not are_performance_records_complete(perf_records, fund_start_date, info.get("current_year"))
+                if needs_nav or needs_perf:
+                    funds_need_update.append(code)
+                else:
+                    funds_skip.append(code)
 
         if funds_skip:
             logger.info(f"Skipping {len(funds_skip)} funds with up-to-date data")
@@ -2641,16 +2712,16 @@ class FundImporter:
         failed_funds = []
 
         if new_fund_codes:
-            new_records_count, new_new_count, new_failed = self._process_new_funds(
-                new_fund_codes, use_cache
+            new_records_count, new_new_count, new_failed = self._process_funds(
+                new_fund_codes, use_cache, None, is_new=True
             )
             total_records += new_records_count
             new_records += new_new_count
             failed_funds.extend(new_failed)
 
         if update_fund_codes:
-            update_records_count, update_new_count, update_failed = self._process_update_funds(
-                update_fund_codes, use_cache, fund_info_batch
+            update_records_count, update_new_count, update_failed = self._process_funds(
+                update_fund_codes, use_cache, fund_info_batch, is_new=False
             )
             total_records += update_records_count
             new_records += update_new_count
@@ -2658,68 +2729,13 @@ class FundImporter:
 
         return total_records, new_records, failed_funds
 
-    def _process_new_funds(
-        self,
-        fund_codes: List[str],
-        use_cache: bool,
-        batch_size: int = 100
-    ) -> Tuple[int, int, List[str]]:
-        if not fund_codes:
-            return 0, 0, []
-
-        total_records = 0
-        new_records = 0
-        failed_funds = []
-        total_funds = len(fund_codes)
-
-        logger.info(f"Processing {total_funds} new funds with batch_size={batch_size}")
-
-        for batch_start in range(0, total_funds, batch_size):
-            batch_end = min(batch_start + batch_size, total_funds)
-            batch_codes = fund_codes[batch_start:batch_end]
-            batch_num = batch_start // batch_size + 1
-            total_batches = (total_funds + batch_size - 1) // batch_size
-
-            logger.info(f"[New Funds] Batch {batch_num}/{total_batches} ({len(batch_codes)} funds)")
-
-            max_workers = min(self.max_workers * 2, 20)
-            all_performance = []
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_code = {
-                    executor.submit(update_single_fund, code, None, None, self.db_path, use_cache, True): code
-                    for code in batch_codes
-                }
-
-                for future in as_completed(future_to_code):
-                    fund_code = future_to_code[future]
-                    try:
-                        records, new_count, perf_list = future.result()
-                        total_records += records
-                        new_records += new_count
-                        if perf_list:
-                            all_performance.extend(perf_list)
-                        logger.info(f"[New] Updated fund {fund_code}: {records} records, {new_count} new")
-                    except Exception as e:
-                        logger.error(f"[New] Error updating fund {fund_code}: {e}")
-                        failed_funds.append(fund_code)
-
-            if all_performance:
-                perf_count = save_performance(all_performance, self.db_path)
-                total_records += perf_count
-                new_records += perf_count
-                logger.info(f"[New] Batch saved {perf_count} performance records")
-
-            if batch_end < total_funds:
-                gc.collect()
-
-        return total_records, new_records, failed_funds
-
-    def _process_update_funds(
+    def _process_funds(
         self,
         fund_codes: List[str],
         use_cache: bool,
         fund_info_batch: Dict[str, Dict[str, Any]] = None,
-        batch_size: int = 100
+        batch_size: int = 100,
+        is_new: bool = False
     ) -> Tuple[int, int, List[str]]:
         if not fund_codes:
             return 0, 0, []
@@ -2728,8 +2744,9 @@ class FundImporter:
         new_records = 0
         failed_funds = []
         total_funds = len(fund_codes)
+        prefix = "[New]" if is_new else "[Update]"
 
-        logger.info(f"Processing {total_funds} update funds with batch_size={batch_size}")
+        logger.info(f"Processing {total_funds} {'new' if is_new else 'update'} funds with batch_size={batch_size}")
 
         for batch_start in range(0, total_funds, batch_size):
             batch_end = min(batch_start + batch_size, total_funds)
@@ -2737,33 +2754,42 @@ class FundImporter:
             batch_num = batch_start // batch_size + 1
             total_batches = (total_funds + batch_size - 1) // batch_size
 
-            logger.info(f"[Update Funds] Batch {batch_num}/{total_batches} ({len(batch_codes)} funds)")
+            logger.info(f"[{'New Funds' if is_new else 'Update Funds'}] Batch {batch_num}/{total_batches} ({len(batch_codes)} funds)")
 
+            max_workers = min(self.max_workers * 2, MAX_CONCURRENT_WORKERS)
             all_performance = []
-            with ThreadPoolExecutor(max_workers=min(self.max_workers * 2, 20)) as executor:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_code = {
-                    executor.submit(update_single_fund, code, None, None, self.db_path, use_cache, True, fund_info_batch.get(code) if fund_info_batch else None): code
+                    executor.submit(
+                        update_single_fund, code, None, None, self.db_path, use_cache, True,
+                        fund_info_batch.get(code) if fund_info_batch else None
+                    ): code
                     for code in batch_codes
                 }
 
                 for future in as_completed(future_to_code):
                     fund_code = future_to_code[future]
                     try:
-                        records, new_count, perf_list = future.result()
+                        result = future.result()
+                        if result is None:
+                            logger.warning(f"{prefix} Fund {fund_code} returned None")
+                            failed_funds.append(fund_code)
+                            continue
+                        records, new_count, perf_list = result
                         total_records += records
                         new_records += new_count
                         if perf_list:
                             all_performance.extend(perf_list)
-                        logger.info(f"[Update] Updated fund {fund_code}: {records} records, {new_count} new")
+                        logger.info(f"{prefix} Updated fund {fund_code}: {records} records, {new_count} new")
                     except Exception as e:
-                        logger.error(f"[Update] Error updating fund {fund_code}: {e}")
+                        logger.error(f"{prefix} Error updating fund {fund_code}: {e}")
                         failed_funds.append(fund_code)
 
             if all_performance:
                 perf_count = save_performance(all_performance, self.db_path)
                 total_records += perf_count
                 new_records += perf_count
-                logger.info(f"[Update] Batch saved {perf_count} performance records")
+                logger.info(f"{prefix} Batch saved {perf_count} performance records")
 
             if batch_end < total_funds:
                 gc.collect()
@@ -2850,7 +2876,7 @@ class FundImporter:
 
 
 def import_fund_data(
-    max_workers: int = 15,
+    max_workers: int = None,
     db_path: str = DATABASE_PATH,
     limit: int = None,
     only_a_share: bool = True,
@@ -2866,7 +2892,7 @@ def import_fund_data(
 def batch_fetch_nav_history(
     fund_codes: List[str],
     db_path: str = DATABASE_PATH,
-    max_workers: int = 50,
+    max_workers: int = None,
     use_cache: bool = True
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
@@ -2881,6 +2907,7 @@ def batch_fetch_nav_history(
     Returns:
         Dict[str, List[Dict]], key为基金代码，value为净值历史列表
     """
+    max_workers = max_workers or MAX_CONCURRENT_WORKERS
     fund_nav_data: Dict[str, List[Dict[str, Any]]] = {}
 
     def fetch_for_fund(code: str) -> Tuple[str, List[Dict[str, Any]]]:
@@ -2907,7 +2934,7 @@ def batch_fetch_nav_history(
 def batch_calculate_performance(
     fund_nav_data: Dict[str, List[Dict[str, Any]]],
     db_path: str = DATABASE_PATH,
-    max_workers: int = 30
+    max_workers: int = None
 ) -> List[Dict[str, Any]]:
     """
     批量计算多个基金的绩效数据
@@ -2919,6 +2946,7 @@ def batch_calculate_performance(
     Returns:
         所有基金的绩效数据列表
     """
+    max_workers = max_workers or MAX_CONCURRENT_WORKERS
     all_performance: List[Dict[str, Any]] = []
 
     def calc_for_fund(code: str, nav_data: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
@@ -2943,7 +2971,7 @@ def batch_calculate_performance(
 
 
 def import_fund_data_batch(
-    max_workers: int = 50,
+    max_workers: int = None,
     db_path: str = DATABASE_PATH,
     limit: int = None,
     only_a_share: bool = True,
@@ -2965,6 +2993,7 @@ def import_fund_data_batch(
     Returns:
         导入结果统计
     """
+    max_workers = max_workers or MAX_CONCURRENT_WORKERS
     logger.info("Starting batch import (optimized)")
     start_time = time.time()
 
@@ -3174,7 +3203,7 @@ if __name__ == "__main__":
         print(json.dumps(fund_codes, ensure_ascii=False))
 
     elif command == "import_fund_data":
-        max_workers = int(sys.argv[2]) if len(sys.argv) > 2 else 15
+        max_workers = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else None
         limit = int(sys.argv[3]) if len(sys.argv) > 3 else None
         result = import_fund_data(max_workers=max_workers, limit=limit)
         print(json.dumps(result, ensure_ascii=False))

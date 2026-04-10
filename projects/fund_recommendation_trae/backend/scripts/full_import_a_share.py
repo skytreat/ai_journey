@@ -29,7 +29,7 @@ create_database(NEW_DB_PATH)
 result = import_fund_data(max_workers=10, 
                           only_a_share=True, 
                           db_path=NEW_DB_PATH, 
-                          limit=500,
+                          limit=50,
                           use_cache=False)
 
 print(f"\n=== 导入完成 ===")
